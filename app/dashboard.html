@@ -6,102 +6,116 @@
 <title>AquaAlert — Dashboard</title>
 <style>
   :root {
-    --teal: #1D9E75;
-    --teal-dark: #15795A;
-    --amber: #E8A020;
-    --red: #D9534F;
-    --dark: #0D1412;
-    --dark-2: #16201D;
-    --dark-3: #1F2A26;
-    --light: #FAFBF9;
-    --text-dark: #1A2421;
-    --text-light: #FAFBF9;
-    --gray: #6B7570;
-    --gray-light: #E8ECEA;
-    --gray-dark: #2A3431;
+    /* Light (senior) palette */
+    --ink: #14181B;
+    --ink-2: #3C434A;
+    --ink-3: #6B7178;
+    --paper: #F7F4EE;
+    --paper-2: #EFEAE0;
+    --rule-soft: #D8D1C4;
+    /* Accents */
+    --teal: #1D6E5B;
+    --teal-deep: #134338;
+    --signal: #C26A1A;
+    --alarm: #B23A2F;
+    /* Dark (caregiver) palette */
+    --night: #0F1316;
+    --night-2: #181D21;
+    --night-3: #20262B;
+    --night-rule: #2A3137;
+    --night-ink: #EDE7DA;
+    --night-ink-2: rgba(237, 231, 218, 0.62);
+    --night-ink-3: rgba(237, 231, 218, 0.4);
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body { height: 100%; }
   body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
     -webkit-font-smoothing: antialiased;
+    font-size: 15px;
+    line-height: 1.5;
     transition: background 0.4s, color 0.4s;
   }
-  body.mode-senior { background: var(--light); color: var(--text-dark); }
-  body.mode-caregiver { background: var(--dark); color: var(--text-light); }
+  body.mode-senior { background: var(--paper); color: var(--ink); }
+  body.mode-caregiver { background: var(--night); color: var(--night-ink); }
+  .serif {
+    font-family: ui-serif, "New York", "Iowan Old Style", Georgia, serif;
+    font-feature-settings: "kern" 1, "liga" 1, "onum" 1;
+  }
 
-  /* Mode switch */
+  /* Toggle (top-right) */
   .mode-toggle {
     position: fixed;
-    top: 20px; right: 20px;
+    top: 20px; right: 24px;
     z-index: 100;
-    padding: 12px 20px;
-    border-radius: 999px;
+    padding: 8px 16px;
     border: 1px solid;
     cursor: pointer;
-    font-size: 14px;
-    font-weight: 600;
+    font-size: 13px;
+    font-weight: 500;
     font-family: inherit;
-    transition: all 0.2s;
+    background: transparent;
+    transition: background 0.15s, color 0.15s;
   }
   body.mode-senior .mode-toggle {
-    background: var(--text-dark);
-    color: var(--light);
-    border-color: var(--text-dark);
+    border-color: var(--ink);
+    color: var(--ink);
   }
+  body.mode-senior .mode-toggle:hover { background: var(--ink); color: var(--paper); }
   body.mode-caregiver .mode-toggle {
-    background: var(--light);
-    color: var(--dark);
-    border-color: var(--light);
+    border-color: var(--night-ink);
+    color: var(--night-ink);
   }
-  .mode-toggle:hover { transform: translateY(-1px); }
+  body.mode-caregiver .mode-toggle:hover { background: var(--night-ink); color: var(--night); }
 
   .back-link {
     position: fixed;
     top: 24px; left: 24px;
     z-index: 100;
-    font-size: 14px;
+    font-size: 13px;
     text-decoration: none;
-    opacity: 0.7;
-    transition: opacity 0.2s;
+    border-bottom: 1px solid transparent;
+    padding-bottom: 2px;
+    transition: border-color 0.15s, color 0.15s;
   }
-  .back-link:hover { opacity: 1; }
-  body.mode-senior .back-link { color: var(--text-dark); }
-  body.mode-caregiver .back-link { color: var(--text-light); }
+  body.mode-senior .back-link { color: var(--ink-2); }
+  body.mode-senior .back-link:hover { color: var(--ink); border-bottom-color: var(--ink); }
+  body.mode-caregiver .back-link { color: var(--night-ink-2); }
+  body.mode-caregiver .back-link:hover { color: var(--night-ink); border-bottom-color: var(--night-ink); }
 
   /* ============ SENIOR MODE ============ */
   .senior-view { display: none; }
   body.mode-senior .senior-view { display: block; }
 
-  .senior-container {
-    max-width: 640px;
+  .senior-wrap {
+    max-width: 620px;
     margin: 0 auto;
-    padding: 80px 24px 40px;
-    text-align: center;
+    padding: 80px 32px 64px;
   }
 
-  .senior-greeting {
-    font-size: 20px;
-    color: var(--gray);
-    margin-bottom: 8px;
+  .greeting {
+    font-size: 18px;
+    color: var(--ink-3);
+    margin-bottom: 4px;
   }
-  .senior-name {
-    font-size: 32px;
-    font-weight: 700;
-    margin-bottom: 48px;
+  .greeting-name {
+    font-family: ui-serif, "New York", Georgia, serif;
+    font-size: 38px;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    margin-bottom: 56px;
   }
 
-  /* Big gauge — center stage */
   .big-gauge {
     width: 320px;
     height: 320px;
-    margin: 0 auto 32px;
+    margin: 0 auto 36px;
     position: relative;
   }
   .big-gauge svg { width: 100%; height: 100%; transform: rotate(-90deg); }
-  .big-gauge .bg-ring { stroke: var(--gray-light); }
+  .big-gauge .bg-ring { stroke: var(--rule-soft); }
   .big-gauge .fill-ring {
-    stroke-linecap: round;
+    stroke-linecap: butt;
     transition: stroke-dashoffset 1s ease, stroke 0.6s;
   }
   .big-gauge .center {
@@ -113,77 +127,91 @@
     justify-content: center;
   }
   .big-gauge .number {
+    font-family: ui-serif, "New York", Georgia, serif;
     font-size: 120px;
-    font-weight: 800;
+    font-weight: 500;
     line-height: 1;
     letter-spacing: -0.05em;
     font-variant-numeric: tabular-nums;
     transition: color 0.6s;
   }
   .big-gauge .out-of {
-    font-size: 18px;
-    color: var(--gray);
+    font-size: 16px;
+    color: var(--ink-3);
     margin-top: 4px;
+    letter-spacing: 0.02em;
   }
 
+  .center-text {
+    text-align: center;
+  }
   .senior-status {
-    font-size: 32px;
-    font-weight: 700;
-    margin: 32px 0 8px;
+    font-family: ui-serif, Georgia, serif;
+    font-size: 30px;
+    font-weight: 500;
+    margin: 24px 0 8px;
     transition: color 0.6s;
+    line-height: 1.2;
   }
   .senior-substatus {
-    font-size: 18px;
-    color: var(--gray);
+    font-size: 17px;
+    color: var(--ink-2);
     margin-bottom: 40px;
+    max-width: 480px;
+    margin-left: auto;
+    margin-right: auto;
+    line-height: 1.45;
   }
 
   .senior-actions {
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 12px;
     margin-bottom: 48px;
   }
   .big-btn {
     min-height: 64px;
-    padding: 18px 32px;
-    border-radius: 16px;
-    font-size: 20px;
-    font-weight: 700;
+    padding: 18px 28px;
     font-family: inherit;
-    border: none;
+    font-size: 19px;
+    font-weight: 600;
     cursor: pointer;
-    transition: transform 0.15s, box-shadow 0.15s;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 12px;
+    transition: background 0.15s, color 0.15s;
+    border: 1px solid var(--ink);
+    text-align: center;
   }
-  .big-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.12); }
-  .big-btn:active { transform: translateY(0); }
-  .btn-water { background: var(--teal); color: white; }
-  .btn-caregiver { background: white; color: var(--text-dark); border: 2px solid var(--text-dark); }
+  .btn-primary {
+    background: var(--ink);
+    color: var(--paper);
+  }
+  .btn-primary:hover { background: var(--teal-deep); border-color: var(--teal-deep); }
+  .btn-secondary {
+    background: transparent;
+    color: var(--ink);
+  }
+  .btn-secondary:hover { background: var(--paper-2); }
 
-  /* 7-day mini bars */
   .week-section {
-    background: white;
-    border: 1px solid var(--gray-light);
-    border-radius: 16px;
-    padding: 24px;
+    border-top: 1px solid var(--rule-soft);
+    border-bottom: 1px solid var(--rule-soft);
+    padding: 24px 0;
     margin-bottom: 32px;
   }
   .week-title {
-    font-size: 18px;
-    font-weight: 600;
-    margin-bottom: 16px;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--ink-3);
+    font-weight: 700;
+    margin-bottom: 18px;
     text-align: left;
   }
   .week-bars {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
-    gap: 8px;
+    gap: 6px;
     align-items: end;
-    height: 120px;
+    height: 110px;
   }
   .day-bar {
     display: flex;
@@ -195,37 +223,35 @@
   }
   .day-bar .bar {
     width: 100%;
-    border-radius: 8px 8px 4px 4px;
     background: var(--teal);
-    min-height: 8px;
+    min-height: 6px;
     transition: height 0.6s ease;
   }
-  .day-bar.warn .bar { background: var(--amber); }
-  .day-bar.crit .bar { background: var(--red); }
+  .day-bar.warn .bar { background: var(--signal); }
+  .day-bar.crit .bar { background: var(--alarm); }
   .day-bar .label {
-    font-size: 13px;
-    color: var(--gray);
-    font-weight: 600;
+    font-size: 12px;
+    color: var(--ink-3);
+    font-variant-numeric: tabular-nums;
   }
 
   .last-update {
-    font-size: 16px;
-    color: var(--gray);
+    font-size: 14px;
+    color: var(--ink-3);
+    text-align: center;
+    font-variant-numeric: tabular-nums;
   }
 
-  /* Toast confirmation */
   .toast {
     position: fixed;
     bottom: 32px;
     left: 50%;
     transform: translateX(-50%) translateY(120px);
-    background: var(--text-dark);
-    color: var(--light);
-    padding: 16px 28px;
-    border-radius: 999px;
-    font-size: 17px;
-    font-weight: 600;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+    background: var(--ink);
+    color: var(--paper);
+    padding: 14px 24px;
+    font-size: 15px;
+    font-weight: 500;
     transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     z-index: 200;
   }
@@ -235,10 +261,10 @@
   .caregiver-view { display: none; }
   body.mode-caregiver .caregiver-view { display: block; }
 
-  .caregiver-container {
+  .care-wrap {
     max-width: 1200px;
     margin: 0 auto;
-    padding: 80px 32px 40px;
+    padding: 72px 32px 48px;
   }
 
   .care-header {
@@ -248,209 +274,266 @@
     margin-bottom: 32px;
     flex-wrap: wrap;
     gap: 16px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--night-rule);
+  }
+  .care-header .kicker {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--night-ink-3);
+    margin-bottom: 6px;
   }
   .care-header h1 {
-    font-size: 28px;
-    font-weight: 700;
+    font-family: ui-serif, "New York", Georgia, serif;
+    font-size: 26px;
+    font-weight: 600;
     letter-spacing: -0.01em;
+    color: var(--night-ink);
   }
-  .care-header .sub {
-    color: rgba(255,255,255,0.5);
-    font-size: 14px;
+  .care-header .meta {
     margin-top: 4px;
+    font-size: 13px;
+    color: var(--night-ink-2);
   }
   .export-btn {
-    padding: 10px 18px;
+    padding: 8px 16px;
     background: transparent;
-    border: 1px solid rgba(255,255,255,0.2);
-    color: var(--text-light);
-    border-radius: 8px;
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
+    border: 1px solid var(--night-rule);
+    color: var(--night-ink);
+    font-size: 13px;
+    font-weight: 500;
     font-family: inherit;
-    transition: all 0.2s;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
   }
-  .export-btn:hover { background: rgba(255,255,255,0.05); }
+  .export-btn:hover { background: var(--night-2); border-color: var(--night-ink-2); }
 
   .care-grid {
     display: grid;
     grid-template-columns: 1.2fr 1fr;
     gap: 24px;
-    margin-bottom: 24px;
   }
-  @media (max-width: 900px) {
-    .care-grid { grid-template-columns: 1fr; }
-  }
+  @media (max-width: 900px) { .care-grid { grid-template-columns: 1fr; } }
 
   .care-panel {
-    background: var(--dark-2);
-    border: 1px solid var(--gray-dark);
-    border-radius: 14px;
+    background: var(--night-2);
+    border: 1px solid var(--night-rule);
     padding: 24px;
   }
   .care-panel h3 {
-    font-size: 12px;
+    font-size: 11px;
     text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: rgba(255,255,255,0.45);
+    letter-spacing: 0.1em;
+    color: var(--night-ink-3);
     font-weight: 700;
-    margin-bottom: 18px;
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--night-rule);
   }
 
-  /* Index summary */
   .care-index {
     display: flex;
-    align-items: center;
+    align-items: baseline;
     gap: 24px;
   }
   .care-index .num {
-    font-size: 64px;
-    font-weight: 800;
+    font-family: ui-serif, "New York", Georgia, serif;
+    font-size: 76px;
+    font-weight: 500;
     line-height: 1;
+    letter-spacing: -0.04em;
     font-variant-numeric: tabular-nums;
     color: var(--teal);
     transition: color 0.4s;
   }
   .care-index .text .state {
-    font-size: 18px;
-    font-weight: 700;
+    font-family: ui-serif, Georgia, serif;
+    font-size: 19px;
+    font-weight: 600;
     color: var(--teal);
     transition: color 0.4s;
   }
   .care-index .text .desc {
     font-size: 13px;
-    color: rgba(255,255,255,0.5);
-    margin-top: 4px;
+    color: var(--night-ink-2);
+    margin-top: 6px;
+    max-width: 260px;
+    line-height: 1.5;
   }
   .care-state-good .num, .care-state-good .state { color: var(--teal); }
-  .care-state-warn .num, .care-state-warn .state { color: var(--amber); }
-  .care-state-crit .num, .care-state-crit .state { color: var(--red); }
+  .care-state-warn .num, .care-state-warn .state { color: var(--signal); }
+  .care-state-crit .num, .care-state-crit .state { color: var(--alarm); }
 
-  /* Readings table */
+  .scenarios-care {
+    display: flex;
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid var(--night-rule);
+  }
+  .scenarios-care .lbl {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--night-ink-3);
+    font-weight: 600;
+    margin-right: 16px;
+    align-self: center;
+  }
+  .scenarios-care .opts {
+    display: flex;
+    border: 1px solid var(--night-rule);
+  }
+  .scenario-care {
+    padding: 6px 14px;
+    background: transparent;
+    border: none;
+    border-right: 1px solid var(--night-rule);
+    color: var(--night-ink-2);
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .scenario-care:last-child { border-right: none; }
+  .scenario-care.active { background: var(--night-ink); color: var(--night); }
+
+  /* Readings */
   .readings-list {
     display: flex;
     flex-direction: column;
-    gap: 12px;
   }
   .reading-row {
     display: flex;
     align-items: baseline;
     justify-content: space-between;
-    padding: 12px 0;
-    border-bottom: 1px solid var(--gray-dark);
+    padding: 14px 0;
+    border-bottom: 1px solid var(--night-rule);
     font-size: 14px;
   }
   .reading-row:last-child { border: none; }
-  .reading-row .key { color: rgba(255,255,255,0.6); }
+  .reading-row .key { color: var(--night-ink-2); }
+  .reading-row .key .range {
+    color: var(--night-ink-3);
+    font-size: 11px;
+    margin-left: 6px;
+    font-variant-numeric: tabular-nums;
+  }
   .reading-row .val {
+    font-family: ui-serif, Georgia, serif;
     font-variant-numeric: tabular-nums;
     font-weight: 600;
-    font-size: 18px;
+    font-size: 20px;
+    color: var(--night-ink);
   }
-  .reading-row .range {
-    color: rgba(255,255,255,0.35);
+  .reading-row .val .unit {
+    font-family: ui-sans-serif, sans-serif;
     font-size: 12px;
-    margin-left: 8px;
+    font-weight: 400;
+    color: var(--night-ink-3);
+    margin-left: 4px;
   }
 
-  /* Trend chart */
+  /* Trend */
   .trend-full { grid-column: 1 / -1; }
   .care-trend {
     width: 100%;
     height: 220px;
     display: block;
+    background: var(--night-3);
+    border: 1px solid var(--night-rule);
   }
   .trend-axis-care {
     display: flex;
     justify-content: space-between;
     margin-top: 8px;
     font-size: 11px;
-    color: rgba(255,255,255,0.35);
+    color: var(--night-ink-3);
+    font-variant-numeric: tabular-nums;
   }
 
-  /* Alerts table */
+  /* Alerts */
   .alerts-table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 14px;
+    font-size: 13px;
   }
   .alerts-table th, .alerts-table td {
-    padding: 10px 12px;
+    padding: 10px 0;
     text-align: left;
-    border-bottom: 1px solid var(--gray-dark);
+    border-bottom: 1px solid var(--night-rule);
   }
   .alerts-table th {
     font-size: 11px;
     text-transform: uppercase;
     letter-spacing: 0.06em;
-    color: rgba(255,255,255,0.4);
+    color: var(--night-ink-3);
     font-weight: 600;
+    border-bottom-color: var(--night-ink-3);
   }
   .alerts-table tr:last-child td { border: none; }
   .alerts-table .sev-info { color: var(--teal); }
-  .alerts-table .sev-warn { color: var(--amber); }
-  .alerts-table .sev-crit { color: var(--red); }
+  .alerts-table .sev-warn { color: var(--signal); }
+  .alerts-table .sev-crit { color: var(--alarm); }
   .alerts-table .ts {
     font-variant-numeric: tabular-nums;
-    color: rgba(255,255,255,0.5);
-    font-size: 13px;
+    color: var(--night-ink-2);
+    font-size: 12px;
   }
 
-  /* Device status */
+  /* Devices */
   .device-row {
     display: flex;
-    align-items: center;
+    align-items: baseline;
     justify-content: space-between;
-    padding: 10px 0;
-    border-bottom: 1px solid var(--gray-dark);
-    font-size: 14px;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--night-rule);
+    gap: 16px;
   }
   .device-row:last-child { border: none; }
-  .device-row .name { font-weight: 600; }
-  .device-row .meta { color: rgba(255,255,255,0.45); font-size: 12px; }
-  .conn { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--teal); font-weight: 600; }
-  .conn .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--teal); box-shadow: 0 0 8px var(--teal); }
-
-  /* Scenario buttons (caregiver) */
-  .scenarios-care {
-    display: flex;
-    gap: 8px;
-    margin-top: 16px;
-  }
-  .scenario-care {
-    flex: 1;
-    padding: 8px 12px;
-    background: var(--dark-3);
-    border: 1px solid var(--gray-dark);
-    border-radius: 8px;
-    color: rgba(255,255,255,0.7);
-    font-size: 12px;
+  .device-row .name {
     font-weight: 600;
-    cursor: pointer;
-    font-family: inherit;
-    transition: all 0.2s;
+    font-size: 14px;
+    color: var(--night-ink);
   }
-  .scenario-care.active { background: var(--teal); color: white; border-color: var(--teal); }
-
+  .device-row .meta {
+    color: var(--night-ink-3);
+    font-size: 11px;
+    margin-top: 2px;
+    font-variant-numeric: tabular-nums;
+  }
+  .conn-care {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--teal);
+    font-weight: 600;
+  }
+  .conn-care .dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--teal);
+    box-shadow: 0 0 6px rgba(29, 110, 91, 0.6);
+  }
 </style>
 </head>
 <body class="mode-senior">
 
-<a href="index.html" class="back-link">← Back to app</a>
-<button class="mode-toggle" id="mode-toggle">Switch to caregiver view</button>
+<a href="index.html" class="back-link">← Back to monitor</a>
+<button class="mode-toggle" id="mode-toggle">Caregiver view</button>
 
 <!-- ============ SENIOR MODE ============ -->
 <div class="senior-view">
-  <div class="senior-container">
-    <div class="senior-greeting">Hello,</div>
-    <div class="senior-name">Antonio 👋</div>
+  <div class="senior-wrap">
+    <div class="greeting">Today</div>
+    <div class="greeting-name serif">Hello, Antonio.</div>
 
     <div class="big-gauge" id="big-gauge">
       <svg viewBox="0 0 200 200">
-        <circle class="bg-ring" cx="100" cy="100" r="90" fill="none" stroke-width="12"/>
-        <circle class="fill-ring" id="big-fill" cx="100" cy="100" r="90" fill="none" stroke-width="12"
-                stroke-dasharray="565.49" stroke-dashoffset="565.49"/>
+        <circle class="bg-ring" cx="100" cy="100" r="88" fill="none" stroke-width="10"/>
+        <circle class="fill-ring" id="big-fill" cx="100" cy="100" r="88" fill="none" stroke-width="10"
+                stroke-dasharray="552.92" stroke-dashoffset="552.92"/>
       </svg>
       <div class="center">
         <div class="number" id="big-num">—</div>
@@ -458,16 +541,18 @@
       </div>
     </div>
 
-    <div class="senior-status" id="senior-status">Loading…</div>
-    <div class="senior-substatus" id="senior-substatus">Please wait a moment</div>
+    <div class="center-text">
+      <div class="senior-status serif" id="senior-status">Loading</div>
+      <div class="senior-substatus" id="senior-substatus">Please wait a moment.</div>
+    </div>
 
     <div class="senior-actions">
-      <button class="big-btn btn-water" id="btn-drank">💧 I just drank water</button>
-      <button class="big-btn btn-caregiver">📞 Call caregiver</button>
+      <button class="big-btn btn-primary" id="btn-drank">I just drank water</button>
+      <button class="big-btn btn-secondary">Call my caregiver</button>
     </div>
 
     <div class="week-section">
-      <div class="week-title">Last 7 days</div>
+      <div class="week-title">Last seven days</div>
       <div class="week-bars" id="week-bars"></div>
     </div>
 
@@ -477,17 +562,19 @@
 
 <!-- ============ CAREGIVER MODE ============ -->
 <div class="caregiver-view">
-  <div class="caregiver-container">
+  <div class="care-wrap">
 
     <div class="care-header">
       <div>
-        <h1>Antonio Martínez — Live monitoring</h1>
-        <div class="sub">72 years old · Barcelona · Plan Calor enrolled · Patient ID #A-2026-0142</div>
+        <div class="kicker">Patient #A-2026-0142 · Plan Calor enrolled</div>
+        <h1 class="serif">Antonio Martínez — live monitoring</h1>
+        <div class="meta">72 years · Barcelona · Primary caregiver: Carmen M.</div>
       </div>
-      <button class="export-btn" id="export-csv">⬇ Export CSV</button>
+      <button class="export-btn" id="export-csv">Export CSV</button>
     </div>
 
     <div class="care-grid">
+
       <div class="care-panel" id="care-index-panel">
         <h3>Current hydration index</h3>
         <div class="care-index">
@@ -497,11 +584,13 @@
             <div class="desc" id="care-desc">—</div>
           </div>
         </div>
-
         <div class="scenarios-care">
-          <button class="scenario-care active" data-scenario="normal">Normal</button>
-          <button class="scenario-care" data-scenario="warning">Warning</button>
-          <button class="scenario-care" data-scenario="critical">Critical</button>
+          <span class="lbl">Scenario</span>
+          <div class="opts">
+            <button class="scenario-care active" data-scenario="normal">Normal</button>
+            <button class="scenario-care" data-scenario="warning">Warning</button>
+            <button class="scenario-care" data-scenario="critical">Critical</button>
+          </div>
         </div>
       </div>
 
@@ -509,27 +598,27 @@
         <h3>Live sensor readings</h3>
         <div class="readings-list">
           <div class="reading-row">
-            <span class="key">Saliva conductance <span class="range">(750–2000)</span></span>
-            <span class="val"><span id="c-saliva">—</span> µS</span>
+            <span class="key">Saliva conductance<span class="range">750–2000</span></span>
+            <span class="val"><span id="c-saliva">—</span><span class="unit">µS</span></span>
           </div>
           <div class="reading-row">
-            <span class="key">Ankle BIA impedance <span class="range">(200–400)</span></span>
-            <span class="val"><span id="c-bia">—</span> Ω</span>
+            <span class="key">Ankle BIA impedance<span class="range">200–400</span></span>
+            <span class="val"><span id="c-bia">—</span><span class="unit">Ω</span></span>
           </div>
           <div class="reading-row">
             <span class="key">Liquid temperature</span>
-            <span class="val"><span id="c-tliq">—</span> °C</span>
+            <span class="val"><span id="c-tliq">—</span><span class="unit">°C</span></span>
           </div>
           <div class="reading-row">
             <span class="key">Ambient temperature</span>
-            <span class="val"><span id="c-tamb">—</span> °C</span>
+            <span class="val"><span id="c-tamb">—</span><span class="unit">°C</span></span>
           </div>
         </div>
       </div>
 
       <div class="care-panel trend-full">
         <h3>24-hour hydration index trend</h3>
-        <canvas class="care-trend" id="care-trend" width="1100" height="220"></canvas>
+        <canvas class="care-trend" id="care-trend"></canvas>
         <div class="trend-axis-care" id="care-axis"></div>
       </div>
 
@@ -544,20 +633,20 @@
       </div>
 
       <div class="care-panel">
-        <h3>Device status</h3>
+        <h3>Device telemetry</h3>
         <div class="device-row">
           <div>
-            <div class="name">🍶 AquaAlert Bottle</div>
-            <div class="meta">MAC AA:BB:CC:11:22:33 · Battery 78% · RSSI -52 dBm</div>
+            <div class="name">AquaAlert Bottle</div>
+            <div class="meta">MAC AA:BB:CC:11:22:33 · Bat. 78% · RSSI −52 dBm</div>
           </div>
-          <span class="conn"><span class="dot"></span>BLE connected</span>
+          <span class="conn-care"><span class="dot"></span>BLE connected</span>
         </div>
         <div class="device-row">
           <div>
-            <div class="name">🦵 AquaAlert Leg Mesh</div>
-            <div class="meta">Hub: bottle · Battery 91% · Last reading 2s ago</div>
+            <div class="name">AquaAlert Leg Mesh</div>
+            <div class="meta">via bottle hub · Bat. 91% · Last reading 2 s ago</div>
           </div>
-          <span class="conn"><span class="dot"></span>BLE via hub</span>
+          <span class="conn-care"><span class="dot"></span>BLE via hub</span>
         </div>
       </div>
 
@@ -565,15 +654,13 @@
   </div>
 </div>
 
-<div class="toast" id="toast">Thanks, Antonio! 💧 Logged.</div>
+<div class="toast" id="toast">Intake logged.</div>
 
 <script>
-  // ============ STATE ============
   let scenario = 'normal';
   const target = { normal: 78, warning: 48, critical: 22 };
   let currentIndex = 78;
 
-  // History (48 half-hour points = 24h)
   const history = [];
   function genHistory(s) {
     const baseline = target[s];
@@ -587,10 +674,8 @@
   }
   history.push(...genHistory(scenario));
 
-  // 7-day data
   const week = [82, 76, 71, 68, 79, 73, 78];
 
-  // Alerts log
   const alerts = [
     { t: '14:32', type: 'Info', sev: 'info', val: 'Index 78', status: 'OK' },
     { t: '12:15', type: 'Reminder', sev: 'info', val: 'No drink in 2h', status: 'Acknowledged' },
@@ -599,21 +684,19 @@
     { t: 'Yesterday 15:10', type: 'Info', sev: 'info', val: 'Index 67', status: 'OK' },
   ];
 
-  // ============ MODE SWITCH ============
   const toggle = document.getElementById('mode-toggle');
   toggle.addEventListener('click', () => {
     const body = document.body;
     if (body.classList.contains('mode-senior')) {
       body.classList.replace('mode-senior', 'mode-caregiver');
-      toggle.textContent = 'Switch to senior view';
+      toggle.textContent = 'Senior view';
     } else {
       body.classList.replace('mode-caregiver', 'mode-senior');
-      toggle.textContent = 'Switch to caregiver view';
+      toggle.textContent = 'Caregiver view';
     }
   });
 
-  // ============ SENIOR GAUGE ============
-  const BIG_CIRC = 2 * Math.PI * 90;
+  const BIG_CIRC = 2 * Math.PI * 88;
   function setBigGauge(value) {
     const offset = BIG_CIRC * (1 - value / 100);
     document.getElementById('big-fill').style.strokeDashoffset = offset;
@@ -623,26 +706,25 @@
     const status = document.getElementById('senior-status');
     let stroke, color, msg, sub;
     if (value >= 60) {
-      stroke = 'var(--teal)'; color = 'var(--teal)';
-      msg = 'You are well hydrated 💧';
-      sub = 'Keep going — small sips throughout the day.';
+      stroke = 'var(--teal)'; color = 'var(--ink)';
+      msg = 'You are well hydrated.';
+      sub = 'Keep small sips throughout the day. Nothing more to do right now.';
     } else if (value >= 30) {
-      stroke = 'var(--amber)'; color = 'var(--amber)';
-      msg = 'Please drink some water soon ⚠️';
-      sub = 'Your hydration is getting low.';
+      stroke = 'var(--signal)'; color = 'var(--signal)';
+      msg = 'Please drink some water soon.';
+      sub = 'Your hydration is getting low. Reach for a glass when you can.';
     } else {
-      stroke = 'var(--red)'; color = 'var(--red)';
-      msg = 'Call your doctor or caregiver 🚨';
-      sub = 'A caregiver has already been notified.';
+      stroke = 'var(--alarm)'; color = 'var(--alarm)';
+      msg = 'Please call your caregiver.';
+      sub = 'Your hydration is critically low. We have already alerted Carmen.';
     }
     fill.style.stroke = stroke;
     num.style.color = color;
-    status.style.color = color;
+    status.style.color = color === 'var(--ink)' ? 'var(--ink)' : color;
     status.textContent = msg;
     document.getElementById('senior-substatus').textContent = sub;
   }
 
-  // ============ WEEK BARS ============
   function renderWeek() {
     const wrap = document.getElementById('week-bars');
     wrap.innerHTML = '';
@@ -651,14 +733,13 @@
       const cls = v >= 60 ? '' : v >= 30 ? 'warn' : 'crit';
       const div = document.createElement('div');
       div.className = 'day-bar ' + cls;
-      const h = Math.max(8, (v / 100) * 100);
+      const h = Math.max(6, (v / 100) * 100);
       div.innerHTML = `<div class="bar" style="height: ${h}%"></div><div class="label">${days[i]}</div>`;
       wrap.appendChild(div);
     });
   }
   renderWeek();
 
-  // ============ TOAST ============
   const toast = document.getElementById('toast');
   function showToast(msg) {
     toast.textContent = msg;
@@ -666,11 +747,10 @@
     setTimeout(() => toast.classList.remove('show'), 2400);
   }
   document.getElementById('btn-drank').addEventListener('click', () => {
-    showToast('Thanks, Antonio! 💧 Logged.');
+    showToast('Intake logged. Thank you.');
     currentIndex = Math.min(95, currentIndex + 8);
   });
 
-  // ============ CAREGIVER PANELS ============
   function setCareIndex(value) {
     document.getElementById('care-num').textContent = Math.round(value);
     const panel = document.getElementById('care-index-panel');
@@ -678,16 +758,16 @@
     let stateTxt, descTxt;
     if (value >= 60) {
       panel.classList.add('care-state-good');
-      stateTxt = 'Well hydrated';
-      descTxt = 'Patient is in safe range. No action needed.';
+      stateTxt = 'Within target';
+      descTxt = 'Patient is in safe hydration range. No action required.';
     } else if (value >= 30) {
       panel.classList.add('care-state-warn');
       stateTxt = 'Warning';
-      descTxt = 'Hydration declining. Encourage water intake.';
+      descTxt = 'Hydration declining. Encourage water intake within 30 minutes.';
     } else {
       panel.classList.add('care-state-crit');
       stateTxt = 'Critical';
-      descTxt = 'Immediate intervention required.';
+      descTxt = 'Severe deficit. Immediate intervention required.';
     }
     document.getElementById('care-state').textContent = stateTxt;
     document.getElementById('care-desc').textContent = descTxt;
@@ -706,7 +786,6 @@
     document.getElementById('c-tamb').textContent = tamb;
   }
 
-  // ============ CAREGIVER TREND ============
   const careCanvas = document.getElementById('care-trend');
   const careCtx = careCanvas.getContext('2d');
   function sizeCare() {
@@ -714,6 +793,7 @@
     const r = careCanvas.getBoundingClientRect();
     careCanvas.width = r.width * dpr;
     careCanvas.height = 220 * dpr;
+    careCtx.setTransform(1, 0, 0, 1, 0, 0);
     careCtx.scale(dpr, dpr);
   }
   sizeCare();
@@ -721,70 +801,54 @@
 
   function drawCareTrend() {
     const r = careCanvas.getBoundingClientRect();
-    const w = r.width;
-    const h = 220;
+    const w = r.width, h = 220;
     careCtx.clearRect(0, 0, w, h);
 
-    // Threshold lines
     const y60 = h - (60 / 100) * h;
     const y30 = h - (30 / 100) * h;
-    careCtx.setLineDash([4, 4]);
-    careCtx.strokeStyle = 'rgba(29, 158, 117, 0.3)';
+    careCtx.setLineDash([3, 4]);
+    careCtx.strokeStyle = 'rgba(29, 110, 91, 0.4)';
     careCtx.beginPath(); careCtx.moveTo(0, y60); careCtx.lineTo(w, y60); careCtx.stroke();
-    careCtx.strokeStyle = 'rgba(217, 83, 79, 0.3)';
+    careCtx.strokeStyle = 'rgba(178, 58, 47, 0.4)';
     careCtx.beginPath(); careCtx.moveTo(0, y30); careCtx.lineTo(w, y30); careCtx.stroke();
     careCtx.setLineDash([]);
 
-    // Threshold labels
-    careCtx.fillStyle = 'rgba(29, 158, 117, 0.6)';
-    careCtx.font = '11px -apple-system, sans-serif';
+    careCtx.fillStyle = 'rgba(237, 231, 218, 0.45)';
+    careCtx.font = '11px ui-sans-serif, -apple-system, sans-serif';
     careCtx.fillText('Healthy ≥ 60', 8, y60 - 4);
-    careCtx.fillStyle = 'rgba(217, 83, 79, 0.6)';
     careCtx.fillText('Critical < 30', 8, y30 - 4);
 
     const step = w / (history.length - 1);
 
-    // Area fill
     careCtx.beginPath();
     careCtx.moveTo(0, h);
-    history.forEach((v, i) => {
-      const x = i * step;
-      const y = h - (v / 100) * h;
-      careCtx.lineTo(x, y);
-    });
+    history.forEach((v, i) => { careCtx.lineTo(i * step, h - (v / 100) * h); });
     careCtx.lineTo(w, h);
     careCtx.closePath();
     const grad = careCtx.createLinearGradient(0, 0, 0, h);
-    grad.addColorStop(0, 'rgba(29, 158, 117, 0.3)');
-    grad.addColorStop(1, 'rgba(29, 158, 117, 0)');
+    grad.addColorStop(0, 'rgba(29, 110, 91, 0.25)');
+    grad.addColorStop(1, 'rgba(29, 110, 91, 0)');
     careCtx.fillStyle = grad;
     careCtx.fill();
 
-    // Line
     careCtx.beginPath();
     history.forEach((v, i) => {
-      const x = i * step;
-      const y = h - (v / 100) * h;
+      const x = i * step, y = h - (v / 100) * h;
       if (i === 0) careCtx.moveTo(x, y); else careCtx.lineTo(x, y);
     });
-    careCtx.strokeStyle = '#1D9E75';
-    careCtx.lineWidth = 2.5;
+    careCtx.strokeStyle = '#1D6E5B';
+    careCtx.lineWidth = 1.8;
     careCtx.lineJoin = 'round';
     careCtx.stroke();
 
-    // Current point
     const lx = (history.length - 1) * step;
     const ly = h - (history[history.length - 1] / 100) * h;
     careCtx.beginPath();
-    careCtx.arc(lx, ly, 5, 0, Math.PI * 2);
-    careCtx.fillStyle = '#1D9E75';
+    careCtx.arc(lx, ly, 3.5, 0, Math.PI * 2);
+    careCtx.fillStyle = '#1D6E5B';
     careCtx.fill();
-    careCtx.strokeStyle = '#0D1412';
-    careCtx.lineWidth = 2;
-    careCtx.stroke();
   }
 
-  // Axis
   const careAxis = document.getElementById('care-axis');
   ['24h ago', '18h', '12h', '6h', 'now'].forEach(l => {
     const s = document.createElement('span');
@@ -792,7 +856,6 @@
     careAxis.appendChild(s);
   });
 
-  // ============ ALERTS ============
   function renderAlerts() {
     const tb = document.getElementById('alerts-body');
     tb.innerHTML = '';
@@ -809,7 +872,6 @@
   }
   renderAlerts();
 
-  // ============ SCENARIO ============
   document.querySelectorAll('.scenario-care').forEach(btn => {
     btn.addEventListener('click', () => {
       document.querySelectorAll('.scenario-care').forEach(b => b.classList.remove('active'));
@@ -822,7 +884,6 @@
     });
   });
 
-  // ============ CSV EXPORT ============
   document.getElementById('export-csv').addEventListener('click', () => {
     const now = new Date();
     let csv = 'timestamp,hydration_index,saliva_conductance_uS,bia_impedance_ohm,liquid_temp_c,ambient_temp_c\n';
@@ -843,7 +904,6 @@
     URL.revokeObjectURL(url);
   });
 
-  // ============ TICK ============
   function tick() {
     const t = target[scenario];
     currentIndex += (t - currentIndex) * 0.15 + (Math.random() - 0.5) * 4;
@@ -862,7 +922,6 @@
     document.getElementById('last-update').textContent = `Last update: ${t2}`;
   }
 
-  // Init
   setBigGauge(currentIndex);
   setCareIndex(currentIndex);
   setCareReadings(currentIndex);
