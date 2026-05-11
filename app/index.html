@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AquaAlert — Live Demo</title>
+<style>
+  :root {
+    --teal: #1D9E75;
+    --teal-dark: #15795A;
+    --amber: #E8A020;
+    --red: #D9534F;
+    --dark: #0D1412;
+    --dark-2: #16201D;
+    --dark-3: #1F2A26;
+    --light: #FAFBF9;
+    --gray: #8A9590;
+    --gray-light: #2A3431;
+    --text-light: #FAFBF9;
+    --text-dim: rgba(255,255,255,0.65);
+    --text-faint: rgba(255,255,255,0.4);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--dark);
+    color: var(--text-light);
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+    padding-bottom: 40px;
+  }
+
+  /* Top bar */
+  .topbar {
+    padding: 20px 32px;
+    border-bottom: 1px solid var(--gray-light);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .topbar .logo {
+    display: flex; align-items: center; gap: 10px;
+    font-weight: 700; font-size: 17px;
+  }
+  .topbar .logo a { color: var(--text-light); text-decoration: none; }
+  .topbar .nav-links { display: flex; gap: 20px; align-items: center; }
+  .topbar .nav-links a {
+    color: var(--text-dim);
+    text-decoration: none;
+    font-size: 14px;
+    transition: color 0.2s;
+  }
+  .topbar .nav-links a:hover { color: var(--text-light); }
+  .badge-live {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 4px 10px;
+    background: rgba(29, 158, 117, 0.15);
+    border: 1px solid rgba(29, 158, 117, 0.4);
+    border-radius: 999px;
+    font-size: 12px;
+    color: var(--teal);
+    font-weight: 600;
+  }
+  .badge-live::before {
+    content: "";
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--teal);
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  /* Layout */
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 32px;
+  }
+
+  /* User strip */
+  .user-strip {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px 24px;
+    background: var(--dark-2);
+    border-radius: 14px;
+    margin-bottom: 32px;
+  }
+  .avatar {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--teal), var(--teal-dark));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+  }
+  .user-info .name { font-weight: 600; font-size: 16px; }
+  .user-info .meta { color: var(--text-dim); font-size: 13px; margin-top: 2px; }
+  .user-strip .clock {
+    margin-left: auto;
+    font-variant-numeric: tabular-nums;
+    color: var(--text-dim);
+    font-size: 14px;
+  }
+
+  /* Main grid */
+  .grid {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr;
+    gap: 24px;
+  }
+  @media (max-width: 900px) {
+    .grid { grid-template-columns: 1fr; }
+  }
+
+  .panel {
+    background: var(--dark-2);
+    border: 1px solid var(--gray-light);
+    border-radius: 16px;
+    padding: 28px;
+  }
+  .panel h2 {
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-faint);
+    font-weight: 700;
+    margin-bottom: 20px;
+  }
+
+  /* Gauge */
+  .gauge-panel {
+    text-align: center;
+    padding: 40px 28px;
+  }
+  .gauge {
+    position: relative;
+    width: 280px;
+    height: 280px;
+    margin: 0 auto 24px;
+  }
+  .gauge svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+  .gauge-bg { stroke: var(--gray-light); }
+  .gauge-fill {
+    stroke: var(--teal);
+    stroke-linecap: round;
+    transition: stroke-dashoffset 1.2s cubic-bezier(0.4, 0, 0.2, 1), stroke 0.6s;
+  }
+  .gauge-center {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+  .gauge-value {
+    font-size: 84px;
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -0.04em;
+    font-variant-numeric: tabular-nums;
+    transition: color 0.6s;
+  }
+  .gauge-label {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-faint);
+    margin-top: 8px;
+  }
+  .status-msg {
+    font-size: 20px;
+    font-weight: 600;
+    margin-top: 8px;
+    transition: color 0.6s;
+  }
+  .status-sub {
+    font-size: 14px;
+    color: var(--text-dim);
+    margin-top: 4px;
+  }
+
+  /* Devices */
+  .device-list { display: flex; flex-direction: column; gap: 12px; }
+  .device {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px 20px;
+    background: var(--dark-3);
+    border-radius: 12px;
+    border: 1px solid var(--gray-light);
+  }
+  .device-icon {
+    width: 44px; height: 44px;
+    background: rgba(29, 158, 117, 0.1);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+  }
+  .device-info { flex: 1; }
+  .device-info .name { font-weight: 600; font-size: 15px; }
+  .device-info .sub {
+    font-size: 12px;
+    color: var(--text-dim);
+    margin-top: 2px;
+  }
+  .device-status {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 12px;
+    color: var(--teal);
+    font-weight: 600;
+  }
+  .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--teal);
+    box-shadow: 0 0 8px var(--teal);
+  }
+  .device.offline .device-status { color: var(--gray); }
+  .device.offline .dot { background: var(--gray); box-shadow: none; }
+
+  /* Readings */
+  .readings {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .reading {
+    padding: 18px;
+    background: var(--dark-3);
+    border-radius: 12px;
+    border: 1px solid var(--gray-light);
+  }
+  .reading .label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-faint);
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+  .reading .value {
+    font-size: 24px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.1;
+  }
+  .reading .unit {
+    font-size: 13px;
+    color: var(--text-dim);
+    font-weight: 500;
+    margin-left: 4px;
+  }
+  .reading .normal {
+    margin-top: 4px;
+    font-size: 11px;
+    color: var(--text-faint);
+  }
+
+  /* Trend chart */
+  .trend-panel { grid-column: 1 / -1; }
+  .trend-chart {
+    width: 100%;
+    height: 200px;
+    display: block;
+  }
+  .trend-axis {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 8px;
+    font-size: 11px;
+    color: var(--text-faint);
+  }
+  .threshold-legend {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 16px;
+    font-size: 12px;
+    color: var(--text-dim);
+  }
+  .threshold-legend span {
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .threshold-legend .swatch {
+    width: 16px; height: 2px;
+    border-radius: 1px;
+  }
+
+  /* Scenario controls */
+  .scenarios {
+    display: flex;
+    gap: 8px;
+    margin-top: 24px;
+    padding-top: 24px;
+    border-top: 1px solid var(--gray-light);
+  }
+  .scenario-btn {
+    flex: 1;
+    padding: 10px 14px;
+    background: var(--dark-3);
+    border: 1px solid var(--gray-light);
+    border-radius: 10px;
+    color: var(--text-dim);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .scenario-btn:hover { color: var(--text-light); border-color: var(--teal); }
+  .scenario-btn.active {
+    background: var(--teal);
+    color: white;
+    border-color: var(--teal);
+  }
+  .scenarios-hint {
+    font-size: 11px;
+    color: var(--text-faint);
+    margin-top: 12px;
+    text-align: center;
+  }
+
+  /* Color states */
+  .state-good .gauge-fill { stroke: var(--teal); }
+  .state-good .gauge-value { color: var(--teal); }
+  .state-good .status-msg { color: var(--teal); }
+  .state-warn .gauge-fill { stroke: var(--amber); }
+  .state-warn .gauge-value { color: var(--amber); }
+  .state-warn .status-msg { color: var(--amber); }
+  .state-critical .gauge-fill { stroke: var(--red); }
+  .state-critical .gauge-value { color: var(--red); }
+  .state-critical .status-msg { color: var(--red); }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo">
+    🦦 <a href="../">AquaAlert</a>
+  </div>
+  <div class="nav-links">
+    <span class="badge-live">LIVE DEMO</span>
+    <a href="dashboard.html">Dashboard →</a>
+    <a href="../">← Home</a>
+  </div>
+</div>
+
+<div class="container" id="app">
+
+  <div class="user-strip">
+    <div class="avatar">👴</div>
+    <div class="user-info">
+      <div class="name">Antonio Martínez</div>
+      <div class="meta">72 years old · Barcelona · Plan Calor enrolled</div>
+    </div>
+    <div class="clock" id="clock">—</div>
+  </div>
+
+  <div class="grid">
+
+    <!-- Hydration gauge -->
+    <div class="panel gauge-panel" id="state-panel">
+      <h2>Hydration Index</h2>
+      <div class="gauge">
+        <svg viewBox="0 0 200 200">
+          <circle class="gauge-bg" cx="100" cy="100" r="88" fill="none" stroke-width="14"/>
+          <circle class="gauge-fill" id="gauge-fill" cx="100" cy="100" r="88" fill="none" stroke-width="14"
+                  stroke-dasharray="552.92" stroke-dashoffset="552.92"/>
+        </svg>
+        <div class="gauge-center">
+          <div class="gauge-value" id="gauge-value">—</div>
+          <div class="gauge-label">out of 100</div>
+        </div>
+      </div>
+      <div class="status-msg" id="status-msg">Initializing…</div>
+      <div class="status-sub" id="status-sub">Connecting to devices</div>
+    </div>
+
+    <!-- Devices + Readings stacked -->
+    <div style="display: flex; flex-direction: column; gap: 24px;">
+
+      <div class="panel">
+        <h2>Connected devices</h2>
+        <div class="device-list">
+          <div class="device" id="dev-bottle">
+            <div class="device-icon">🍶</div>
+            <div class="device-info">
+              <div class="name">AquaAlert Bottle</div>
+              <div class="sub">BLE · Battery 78%</div>
+            </div>
+            <div class="device-status"><span class="dot"></span>Connected</div>
+          </div>
+          <div class="device" id="dev-leg">
+            <div class="device-icon">🦵</div>
+            <div class="device-info">
+              <div class="name">AquaAlert Leg Mesh</div>
+              <div class="sub">BLE via bottle hub</div>
+            </div>
+            <div class="device-status"><span class="dot"></span>Connected</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Live sensor readings</h2>
+        <div class="readings">
+          <div class="reading">
+            <div class="label">Saliva conductance</div>
+            <div class="value"><span id="r-saliva">—</span><span class="unit">µS</span></div>
+            <div class="normal">Normal: 750–2000</div>
+          </div>
+          <div class="reading">
+            <div class="label">Ankle BIA</div>
+            <div class="value"><span id="r-bia">—</span><span class="unit">Ω</span></div>
+            <div class="normal">Normal: 200–400</div>
+          </div>
+          <div class="reading">
+            <div class="label">Liquid temp</div>
+            <div class="value"><span id="r-tliq">—</span><span class="unit">°C</span></div>
+            <div class="normal">Bottle interior</div>
+          </div>
+          <div class="reading">
+            <div class="label">Ambient temp</div>
+            <div class="value"><span id="r-tamb">—</span><span class="unit">°C</span></div>
+            <div class="normal">Bottle exterior</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 24h trend full width -->
+    <div class="panel trend-panel">
+      <h2>Hydration index — last 24 hours</h2>
+      <div class="threshold-legend">
+        <span><span class="swatch" style="background: var(--teal);"></span>Healthy ≥ 60</span>
+        <span><span class="swatch" style="background: var(--amber);"></span>Warning 30–59</span>
+        <span><span class="swatch" style="background: var(--red);"></span>Critical &lt; 30</span>
+      </div>
+      <canvas class="trend-chart" id="trend" width="1100" height="200"></canvas>
+      <div class="trend-axis" id="trend-axis"></div>
+
+      <div class="scenarios">
+        <button class="scenario-btn active" data-scenario="normal">Normal day</button>
+        <button class="scenario-btn" data-scenario="warning">Heat wave warning</button>
+        <button class="scenario-btn" data-scenario="critical">Critical event</button>
+      </div>
+      <div class="scenarios-hint">Switch scenarios to see how the system responds to different hydration states</div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  // Simulated state
+  let scenario = 'normal';
+  const target = { normal: 78, warning: 48, critical: 22 };
+  let currentIndex = 78;
+  let displayIndex = 78;
+
+  // 24h history (48 half-hour points)
+  const history = [];
+  function generateHistory(s) {
+    const baseline = target[s];
+    const arr = [];
+    for (let i = 0; i < 48; i++) {
+      const noise = (Math.random() - 0.5) * 12;
+      const drift = Math.sin(i * 0.3) * 6;
+      arr.push(Math.max(5, Math.min(95, baseline + noise + drift)));
+    }
+    return arr;
+  }
+  history.push(...generateHistory(scenario));
+
+  // Clock
+  function updateClock() {
+    const now = new Date();
+    const t = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    document.getElementById('clock').textContent = `Last update · ${t}`;
+  }
+  setInterval(updateClock, 1000);
+  updateClock();
+
+  // Gauge update
+  const CIRCUMFERENCE = 2 * Math.PI * 88;
+  function setGauge(value) {
+    const offset = CIRCUMFERENCE * (1 - value / 100);
+    document.getElementById('gauge-fill').style.strokeDashoffset = offset;
+    document.getElementById('gauge-value').textContent = Math.round(value);
+  }
+
+  function updateState(value) {
+    const panel = document.getElementById('state-panel');
+    panel.classList.remove('state-good', 'state-warn', 'state-critical');
+    let msg, sub;
+    if (value >= 60) {
+      panel.classList.add('state-good');
+      msg = 'Well hydrated 💧';
+      sub = 'Keep it up — drink a glass of water with each meal.';
+    } else if (value >= 30) {
+      panel.classList.add('state-warn');
+      msg = 'Drink some water soon ⚠️';
+      sub = 'Body water is dropping. Caregiver has been notified.';
+    } else {
+      panel.classList.add('state-critical');
+      msg = 'Critical — call for help 🚨';
+      sub = 'Urgent alert sent to caregiver and emergency contact.';
+    }
+    document.getElementById('status-msg').textContent = msg;
+    document.getElementById('status-sub').textContent = sub;
+  }
+
+  // Sensor mapping (very rough but plausible)
+  function updateReadings(value) {
+    // Higher saliva conductance = more dehydrated → lower index
+    const saliva = Math.round(2400 - value * 18 + (Math.random() - 0.5) * 80);
+    // BIA impedance higher = less body water → lower index
+    const bia = Math.round(440 - value * 2.2 + (Math.random() - 0.5) * 10);
+    const tliq = (18 + Math.random() * 2).toFixed(1);
+    const tamb = scenario === 'normal' ? (24 + Math.random() * 2).toFixed(1)
+                : scenario === 'warning' ? (34 + Math.random() * 2).toFixed(1)
+                : (39 + Math.random() * 2).toFixed(1);
+    document.getElementById('r-saliva').textContent = saliva;
+    document.getElementById('r-bia').textContent = bia;
+    document.getElementById('r-tliq').textContent = tliq;
+    document.getElementById('r-tamb').textContent = tamb;
+  }
+
+  // Trend chart
+  const canvas = document.getElementById('trend');
+  const ctx = canvas.getContext('2d');
+  function resizeCanvas() {
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width * dpr;
+    canvas.height = 200 * dpr;
+    ctx.scale(dpr, dpr);
+  }
+  resizeCanvas();
+  window.addEventListener('resize', () => { resizeCanvas(); drawTrend(); });
+
+  function drawTrend() {
+    const rect = canvas.getBoundingClientRect();
+    const w = rect.width;
+    const h = 200;
+    ctx.clearRect(0, 0, w, h);
+
+    // Threshold lines
+    const y60 = h - (60 / 100) * h;
+    const y30 = h - (30 / 100) * h;
+    ctx.strokeStyle = 'rgba(29, 158, 117, 0.25)';
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath(); ctx.moveTo(0, y60); ctx.lineTo(w, y60); ctx.stroke();
+    ctx.strokeStyle = 'rgba(217, 83, 79, 0.25)';
+    ctx.beginPath(); ctx.moveTo(0, y30); ctx.lineTo(w, y30); ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Data line
+    const step = w / (history.length - 1);
+
+    // Fill area under curve
+    ctx.beginPath();
+    ctx.moveTo(0, h);
+    history.forEach((v, i) => {
+      const x = i * step;
+      const y = h - (v / 100) * h;
+      ctx.lineTo(x, y);
+    });
+    ctx.lineTo(w, h);
+    ctx.closePath();
+    const grad = ctx.createLinearGradient(0, 0, 0, h);
+    grad.addColorStop(0, 'rgba(29, 158, 117, 0.25)');
+    grad.addColorStop(1, 'rgba(29, 158, 117, 0)');
+    ctx.fillStyle = grad;
+    ctx.fill();
+
+    // Line
+    ctx.beginPath();
+    history.forEach((v, i) => {
+      const x = i * step;
+      const y = h - (v / 100) * h;
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    });
+    ctx.strokeStyle = '#1D9E75';
+    ctx.lineWidth = 2.5;
+    ctx.lineJoin = 'round';
+    ctx.stroke();
+
+    // Current point
+    const lastX = (history.length - 1) * step;
+    const lastY = h - (history[history.length - 1] / 100) * h;
+    ctx.beginPath();
+    ctx.arc(lastX, lastY, 5, 0, Math.PI * 2);
+    ctx.fillStyle = '#1D9E75';
+    ctx.fill();
+    ctx.strokeStyle = '#0D1412';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
+
+  // Axis labels (hours ago)
+  const axis = document.getElementById('trend-axis');
+  ['24h ago', '18h', '12h', '6h', 'now'].forEach(l => {
+    const s = document.createElement('span');
+    s.textContent = l;
+    axis.appendChild(s);
+  });
+
+  // Scenario switching
+  document.querySelectorAll('.scenario-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.scenario-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      scenario = btn.dataset.scenario;
+      currentIndex = target[scenario];
+      history.length = 0;
+      history.push(...generateHistory(scenario));
+      drawTrend();
+    });
+  });
+
+  // Smooth tick — update every 3s with small fluctuations
+  function tick() {
+    const t = target[scenario];
+    currentIndex += (t - currentIndex) * 0.15 + (Math.random() - 0.5) * 4;
+    currentIndex = Math.max(5, Math.min(95, currentIndex));
+
+    // Animate display toward currentIndex
+    displayIndex += (currentIndex - displayIndex) * 0.4;
+
+    setGauge(displayIndex);
+    updateState(displayIndex);
+    updateReadings(displayIndex);
+
+    // Shift history
+    history.shift();
+    history.push(currentIndex);
+    drawTrend();
+  }
+
+  // Initialize
+  setGauge(currentIndex);
+  updateState(currentIndex);
+  updateReadings(currentIndex);
+  drawTrend();
+
+  setInterval(tick, 3000);
+</script>
+
+</body>
+</html>

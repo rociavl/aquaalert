@@ -1,0 +1,874 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AquaAlert — Dashboard</title>
+<style>
+  :root {
+    --teal: #1D9E75;
+    --teal-dark: #15795A;
+    --amber: #E8A020;
+    --red: #D9534F;
+    --dark: #0D1412;
+    --dark-2: #16201D;
+    --dark-3: #1F2A26;
+    --light: #FAFBF9;
+    --text-dark: #1A2421;
+    --text-light: #FAFBF9;
+    --gray: #6B7570;
+    --gray-light: #E8ECEA;
+    --gray-dark: #2A3431;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    transition: background 0.4s, color 0.4s;
+  }
+  body.mode-senior { background: var(--light); color: var(--text-dark); }
+  body.mode-caregiver { background: var(--dark); color: var(--text-light); }
+
+  /* Mode switch */
+  .mode-toggle {
+    position: fixed;
+    top: 20px; right: 20px;
+    z-index: 100;
+    padding: 12px 20px;
+    border-radius: 999px;
+    border: 1px solid;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    font-family: inherit;
+    transition: all 0.2s;
+  }
+  body.mode-senior .mode-toggle {
+    background: var(--text-dark);
+    color: var(--light);
+    border-color: var(--text-dark);
+  }
+  body.mode-caregiver .mode-toggle {
+    background: var(--light);
+    color: var(--dark);
+    border-color: var(--light);
+  }
+  .mode-toggle:hover { transform: translateY(-1px); }
+
+  .back-link {
+    position: fixed;
+    top: 24px; left: 24px;
+    z-index: 100;
+    font-size: 14px;
+    text-decoration: none;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+  }
+  .back-link:hover { opacity: 1; }
+  body.mode-senior .back-link { color: var(--text-dark); }
+  body.mode-caregiver .back-link { color: var(--text-light); }
+
+  /* ============ SENIOR MODE ============ */
+  .senior-view { display: none; }
+  body.mode-senior .senior-view { display: block; }
+
+  .senior-container {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 80px 24px 40px;
+    text-align: center;
+  }
+
+  .senior-greeting {
+    font-size: 20px;
+    color: var(--gray);
+    margin-bottom: 8px;
+  }
+  .senior-name {
+    font-size: 32px;
+    font-weight: 700;
+    margin-bottom: 48px;
+  }
+
+  /* Big gauge — center stage */
+  .big-gauge {
+    width: 320px;
+    height: 320px;
+    margin: 0 auto 32px;
+    position: relative;
+  }
+  .big-gauge svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+  .big-gauge .bg-ring { stroke: var(--gray-light); }
+  .big-gauge .fill-ring {
+    stroke-linecap: round;
+    transition: stroke-dashoffset 1s ease, stroke 0.6s;
+  }
+  .big-gauge .center {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+  .big-gauge .number {
+    font-size: 120px;
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -0.05em;
+    font-variant-numeric: tabular-nums;
+    transition: color 0.6s;
+  }
+  .big-gauge .out-of {
+    font-size: 18px;
+    color: var(--gray);
+    margin-top: 4px;
+  }
+
+  .senior-status {
+    font-size: 32px;
+    font-weight: 700;
+    margin: 32px 0 8px;
+    transition: color 0.6s;
+  }
+  .senior-substatus {
+    font-size: 18px;
+    color: var(--gray);
+    margin-bottom: 40px;
+  }
+
+  .senior-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-bottom: 48px;
+  }
+  .big-btn {
+    min-height: 64px;
+    padding: 18px 32px;
+    border-radius: 16px;
+    font-size: 20px;
+    font-weight: 700;
+    font-family: inherit;
+    border: none;
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+  }
+  .big-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.12); }
+  .big-btn:active { transform: translateY(0); }
+  .btn-water { background: var(--teal); color: white; }
+  .btn-caregiver { background: white; color: var(--text-dark); border: 2px solid var(--text-dark); }
+
+  /* 7-day mini bars */
+  .week-section {
+    background: white;
+    border: 1px solid var(--gray-light);
+    border-radius: 16px;
+    padding: 24px;
+    margin-bottom: 32px;
+  }
+  .week-title {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 16px;
+    text-align: left;
+  }
+  .week-bars {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 8px;
+    align-items: end;
+    height: 120px;
+  }
+  .day-bar {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    height: 100%;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+  .day-bar .bar {
+    width: 100%;
+    border-radius: 8px 8px 4px 4px;
+    background: var(--teal);
+    min-height: 8px;
+    transition: height 0.6s ease;
+  }
+  .day-bar.warn .bar { background: var(--amber); }
+  .day-bar.crit .bar { background: var(--red); }
+  .day-bar .label {
+    font-size: 13px;
+    color: var(--gray);
+    font-weight: 600;
+  }
+
+  .last-update {
+    font-size: 16px;
+    color: var(--gray);
+  }
+
+  /* Toast confirmation */
+  .toast {
+    position: fixed;
+    bottom: 32px;
+    left: 50%;
+    transform: translateX(-50%) translateY(120px);
+    background: var(--text-dark);
+    color: var(--light);
+    padding: 16px 28px;
+    border-radius: 999px;
+    font-size: 17px;
+    font-weight: 600;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+    transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 200;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+
+  /* ============ CAREGIVER MODE ============ */
+  .caregiver-view { display: none; }
+  body.mode-caregiver .caregiver-view { display: block; }
+
+  .caregiver-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 80px 32px 40px;
+  }
+
+  .care-header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    margin-bottom: 32px;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+  .care-header h1 {
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+  .care-header .sub {
+    color: rgba(255,255,255,0.5);
+    font-size: 14px;
+    margin-top: 4px;
+  }
+  .export-btn {
+    padding: 10px 18px;
+    background: transparent;
+    border: 1px solid rgba(255,255,255,0.2);
+    color: var(--text-light);
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.2s;
+  }
+  .export-btn:hover { background: rgba(255,255,255,0.05); }
+
+  .care-grid {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr;
+    gap: 24px;
+    margin-bottom: 24px;
+  }
+  @media (max-width: 900px) {
+    .care-grid { grid-template-columns: 1fr; }
+  }
+
+  .care-panel {
+    background: var(--dark-2);
+    border: 1px solid var(--gray-dark);
+    border-radius: 14px;
+    padding: 24px;
+  }
+  .care-panel h3 {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: rgba(255,255,255,0.45);
+    font-weight: 700;
+    margin-bottom: 18px;
+  }
+
+  /* Index summary */
+  .care-index {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+  }
+  .care-index .num {
+    font-size: 64px;
+    font-weight: 800;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    color: var(--teal);
+    transition: color 0.4s;
+  }
+  .care-index .text .state {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--teal);
+    transition: color 0.4s;
+  }
+  .care-index .text .desc {
+    font-size: 13px;
+    color: rgba(255,255,255,0.5);
+    margin-top: 4px;
+  }
+  .care-state-good .num, .care-state-good .state { color: var(--teal); }
+  .care-state-warn .num, .care-state-warn .state { color: var(--amber); }
+  .care-state-crit .num, .care-state-crit .state { color: var(--red); }
+
+  /* Readings table */
+  .readings-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .reading-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--gray-dark);
+    font-size: 14px;
+  }
+  .reading-row:last-child { border: none; }
+  .reading-row .key { color: rgba(255,255,255,0.6); }
+  .reading-row .val {
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    font-size: 18px;
+  }
+  .reading-row .range {
+    color: rgba(255,255,255,0.35);
+    font-size: 12px;
+    margin-left: 8px;
+  }
+
+  /* Trend chart */
+  .trend-full { grid-column: 1 / -1; }
+  .care-trend {
+    width: 100%;
+    height: 220px;
+    display: block;
+  }
+  .trend-axis-care {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 8px;
+    font-size: 11px;
+    color: rgba(255,255,255,0.35);
+  }
+
+  /* Alerts table */
+  .alerts-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+  }
+  .alerts-table th, .alerts-table td {
+    padding: 10px 12px;
+    text-align: left;
+    border-bottom: 1px solid var(--gray-dark);
+  }
+  .alerts-table th {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: rgba(255,255,255,0.4);
+    font-weight: 600;
+  }
+  .alerts-table tr:last-child td { border: none; }
+  .alerts-table .sev-info { color: var(--teal); }
+  .alerts-table .sev-warn { color: var(--amber); }
+  .alerts-table .sev-crit { color: var(--red); }
+  .alerts-table .ts {
+    font-variant-numeric: tabular-nums;
+    color: rgba(255,255,255,0.5);
+    font-size: 13px;
+  }
+
+  /* Device status */
+  .device-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--gray-dark);
+    font-size: 14px;
+  }
+  .device-row:last-child { border: none; }
+  .device-row .name { font-weight: 600; }
+  .device-row .meta { color: rgba(255,255,255,0.45); font-size: 12px; }
+  .conn { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--teal); font-weight: 600; }
+  .conn .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--teal); box-shadow: 0 0 8px var(--teal); }
+
+  /* Scenario buttons (caregiver) */
+  .scenarios-care {
+    display: flex;
+    gap: 8px;
+    margin-top: 16px;
+  }
+  .scenario-care {
+    flex: 1;
+    padding: 8px 12px;
+    background: var(--dark-3);
+    border: 1px solid var(--gray-dark);
+    border-radius: 8px;
+    color: rgba(255,255,255,0.7);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.2s;
+  }
+  .scenario-care.active { background: var(--teal); color: white; border-color: var(--teal); }
+
+</style>
+</head>
+<body class="mode-senior">
+
+<a href="index.html" class="back-link">← Back to app</a>
+<button class="mode-toggle" id="mode-toggle">Switch to caregiver view</button>
+
+<!-- ============ SENIOR MODE ============ -->
+<div class="senior-view">
+  <div class="senior-container">
+    <div class="senior-greeting">Hello,</div>
+    <div class="senior-name">Antonio 👋</div>
+
+    <div class="big-gauge" id="big-gauge">
+      <svg viewBox="0 0 200 200">
+        <circle class="bg-ring" cx="100" cy="100" r="90" fill="none" stroke-width="12"/>
+        <circle class="fill-ring" id="big-fill" cx="100" cy="100" r="90" fill="none" stroke-width="12"
+                stroke-dasharray="565.49" stroke-dashoffset="565.49"/>
+      </svg>
+      <div class="center">
+        <div class="number" id="big-num">—</div>
+        <div class="out-of">out of 100</div>
+      </div>
+    </div>
+
+    <div class="senior-status" id="senior-status">Loading…</div>
+    <div class="senior-substatus" id="senior-substatus">Please wait a moment</div>
+
+    <div class="senior-actions">
+      <button class="big-btn btn-water" id="btn-drank">💧 I just drank water</button>
+      <button class="big-btn btn-caregiver">📞 Call caregiver</button>
+    </div>
+
+    <div class="week-section">
+      <div class="week-title">Last 7 days</div>
+      <div class="week-bars" id="week-bars"></div>
+    </div>
+
+    <div class="last-update" id="last-update">Last update: just now</div>
+  </div>
+</div>
+
+<!-- ============ CAREGIVER MODE ============ -->
+<div class="caregiver-view">
+  <div class="caregiver-container">
+
+    <div class="care-header">
+      <div>
+        <h1>Antonio Martínez — Live monitoring</h1>
+        <div class="sub">72 years old · Barcelona · Plan Calor enrolled · Patient ID #A-2026-0142</div>
+      </div>
+      <button class="export-btn" id="export-csv">⬇ Export CSV</button>
+    </div>
+
+    <div class="care-grid">
+      <div class="care-panel" id="care-index-panel">
+        <h3>Current hydration index</h3>
+        <div class="care-index">
+          <div class="num" id="care-num">—</div>
+          <div class="text">
+            <div class="state" id="care-state">—</div>
+            <div class="desc" id="care-desc">—</div>
+          </div>
+        </div>
+
+        <div class="scenarios-care">
+          <button class="scenario-care active" data-scenario="normal">Normal</button>
+          <button class="scenario-care" data-scenario="warning">Warning</button>
+          <button class="scenario-care" data-scenario="critical">Critical</button>
+        </div>
+      </div>
+
+      <div class="care-panel">
+        <h3>Live sensor readings</h3>
+        <div class="readings-list">
+          <div class="reading-row">
+            <span class="key">Saliva conductance <span class="range">(750–2000)</span></span>
+            <span class="val"><span id="c-saliva">—</span> µS</span>
+          </div>
+          <div class="reading-row">
+            <span class="key">Ankle BIA impedance <span class="range">(200–400)</span></span>
+            <span class="val"><span id="c-bia">—</span> Ω</span>
+          </div>
+          <div class="reading-row">
+            <span class="key">Liquid temperature</span>
+            <span class="val"><span id="c-tliq">—</span> °C</span>
+          </div>
+          <div class="reading-row">
+            <span class="key">Ambient temperature</span>
+            <span class="val"><span id="c-tamb">—</span> °C</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="care-panel trend-full">
+        <h3>24-hour hydration index trend</h3>
+        <canvas class="care-trend" id="care-trend" width="1100" height="220"></canvas>
+        <div class="trend-axis-care" id="care-axis"></div>
+      </div>
+
+      <div class="care-panel">
+        <h3>Alert history</h3>
+        <table class="alerts-table" id="alerts-table">
+          <thead>
+            <tr><th>Time</th><th>Type</th><th>Value</th><th>Status</th></tr>
+          </thead>
+          <tbody id="alerts-body"></tbody>
+        </table>
+      </div>
+
+      <div class="care-panel">
+        <h3>Device status</h3>
+        <div class="device-row">
+          <div>
+            <div class="name">🍶 AquaAlert Bottle</div>
+            <div class="meta">MAC AA:BB:CC:11:22:33 · Battery 78% · RSSI -52 dBm</div>
+          </div>
+          <span class="conn"><span class="dot"></span>BLE connected</span>
+        </div>
+        <div class="device-row">
+          <div>
+            <div class="name">🦵 AquaAlert Leg Mesh</div>
+            <div class="meta">Hub: bottle · Battery 91% · Last reading 2s ago</div>
+          </div>
+          <span class="conn"><span class="dot"></span>BLE via hub</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast">Thanks, Antonio! 💧 Logged.</div>
+
+<script>
+  // ============ STATE ============
+  let scenario = 'normal';
+  const target = { normal: 78, warning: 48, critical: 22 };
+  let currentIndex = 78;
+
+  // History (48 half-hour points = 24h)
+  const history = [];
+  function genHistory(s) {
+    const baseline = target[s];
+    const out = [];
+    for (let i = 0; i < 48; i++) {
+      const noise = (Math.random() - 0.5) * 12;
+      const drift = Math.sin(i * 0.3) * 6;
+      out.push(Math.max(5, Math.min(95, baseline + noise + drift)));
+    }
+    return out;
+  }
+  history.push(...genHistory(scenario));
+
+  // 7-day data
+  const week = [82, 76, 71, 68, 79, 73, 78];
+
+  // Alerts log
+  const alerts = [
+    { t: '14:32', type: 'Info', sev: 'info', val: 'Index 78', status: 'OK' },
+    { t: '12:15', type: 'Reminder', sev: 'info', val: 'No drink in 2h', status: 'Acknowledged' },
+    { t: '09:48', type: 'Reminder', sev: 'info', val: 'Morning hydration', status: 'OK' },
+    { t: 'Yesterday 18:22', type: 'Warning', sev: 'warn', val: 'Index 54', status: 'Resolved' },
+    { t: 'Yesterday 15:10', type: 'Info', sev: 'info', val: 'Index 67', status: 'OK' },
+  ];
+
+  // ============ MODE SWITCH ============
+  const toggle = document.getElementById('mode-toggle');
+  toggle.addEventListener('click', () => {
+    const body = document.body;
+    if (body.classList.contains('mode-senior')) {
+      body.classList.replace('mode-senior', 'mode-caregiver');
+      toggle.textContent = 'Switch to senior view';
+    } else {
+      body.classList.replace('mode-caregiver', 'mode-senior');
+      toggle.textContent = 'Switch to caregiver view';
+    }
+  });
+
+  // ============ SENIOR GAUGE ============
+  const BIG_CIRC = 2 * Math.PI * 90;
+  function setBigGauge(value) {
+    const offset = BIG_CIRC * (1 - value / 100);
+    document.getElementById('big-fill').style.strokeDashoffset = offset;
+    document.getElementById('big-num').textContent = Math.round(value);
+    const fill = document.getElementById('big-fill');
+    const num = document.getElementById('big-num');
+    const status = document.getElementById('senior-status');
+    let stroke, color, msg, sub;
+    if (value >= 60) {
+      stroke = 'var(--teal)'; color = 'var(--teal)';
+      msg = 'You are well hydrated 💧';
+      sub = 'Keep going — small sips throughout the day.';
+    } else if (value >= 30) {
+      stroke = 'var(--amber)'; color = 'var(--amber)';
+      msg = 'Please drink some water soon ⚠️';
+      sub = 'Your hydration is getting low.';
+    } else {
+      stroke = 'var(--red)'; color = 'var(--red)';
+      msg = 'Call your doctor or caregiver 🚨';
+      sub = 'A caregiver has already been notified.';
+    }
+    fill.style.stroke = stroke;
+    num.style.color = color;
+    status.style.color = color;
+    status.textContent = msg;
+    document.getElementById('senior-substatus').textContent = sub;
+  }
+
+  // ============ WEEK BARS ============
+  function renderWeek() {
+    const wrap = document.getElementById('week-bars');
+    wrap.innerHTML = '';
+    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    week.forEach((v, i) => {
+      const cls = v >= 60 ? '' : v >= 30 ? 'warn' : 'crit';
+      const div = document.createElement('div');
+      div.className = 'day-bar ' + cls;
+      const h = Math.max(8, (v / 100) * 100);
+      div.innerHTML = `<div class="bar" style="height: ${h}%"></div><div class="label">${days[i]}</div>`;
+      wrap.appendChild(div);
+    });
+  }
+  renderWeek();
+
+  // ============ TOAST ============
+  const toast = document.getElementById('toast');
+  function showToast(msg) {
+    toast.textContent = msg;
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 2400);
+  }
+  document.getElementById('btn-drank').addEventListener('click', () => {
+    showToast('Thanks, Antonio! 💧 Logged.');
+    currentIndex = Math.min(95, currentIndex + 8);
+  });
+
+  // ============ CAREGIVER PANELS ============
+  function setCareIndex(value) {
+    document.getElementById('care-num').textContent = Math.round(value);
+    const panel = document.getElementById('care-index-panel');
+    panel.classList.remove('care-state-good', 'care-state-warn', 'care-state-crit');
+    let stateTxt, descTxt;
+    if (value >= 60) {
+      panel.classList.add('care-state-good');
+      stateTxt = 'Well hydrated';
+      descTxt = 'Patient is in safe range. No action needed.';
+    } else if (value >= 30) {
+      panel.classList.add('care-state-warn');
+      stateTxt = 'Warning';
+      descTxt = 'Hydration declining. Encourage water intake.';
+    } else {
+      panel.classList.add('care-state-crit');
+      stateTxt = 'Critical';
+      descTxt = 'Immediate intervention required.';
+    }
+    document.getElementById('care-state').textContent = stateTxt;
+    document.getElementById('care-desc').textContent = descTxt;
+  }
+
+  function setCareReadings(value) {
+    const saliva = Math.round(2400 - value * 18 + (Math.random() - 0.5) * 80);
+    const bia = Math.round(440 - value * 2.2 + (Math.random() - 0.5) * 10);
+    const tliq = (18 + Math.random() * 2).toFixed(1);
+    const tamb = scenario === 'normal' ? (24 + Math.random() * 2).toFixed(1)
+                : scenario === 'warning' ? (34 + Math.random() * 2).toFixed(1)
+                : (39 + Math.random() * 2).toFixed(1);
+    document.getElementById('c-saliva').textContent = saliva;
+    document.getElementById('c-bia').textContent = bia;
+    document.getElementById('c-tliq').textContent = tliq;
+    document.getElementById('c-tamb').textContent = tamb;
+  }
+
+  // ============ CAREGIVER TREND ============
+  const careCanvas = document.getElementById('care-trend');
+  const careCtx = careCanvas.getContext('2d');
+  function sizeCare() {
+    const dpr = window.devicePixelRatio || 1;
+    const r = careCanvas.getBoundingClientRect();
+    careCanvas.width = r.width * dpr;
+    careCanvas.height = 220 * dpr;
+    careCtx.scale(dpr, dpr);
+  }
+  sizeCare();
+  window.addEventListener('resize', () => { sizeCare(); drawCareTrend(); });
+
+  function drawCareTrend() {
+    const r = careCanvas.getBoundingClientRect();
+    const w = r.width;
+    const h = 220;
+    careCtx.clearRect(0, 0, w, h);
+
+    // Threshold lines
+    const y60 = h - (60 / 100) * h;
+    const y30 = h - (30 / 100) * h;
+    careCtx.setLineDash([4, 4]);
+    careCtx.strokeStyle = 'rgba(29, 158, 117, 0.3)';
+    careCtx.beginPath(); careCtx.moveTo(0, y60); careCtx.lineTo(w, y60); careCtx.stroke();
+    careCtx.strokeStyle = 'rgba(217, 83, 79, 0.3)';
+    careCtx.beginPath(); careCtx.moveTo(0, y30); careCtx.lineTo(w, y30); careCtx.stroke();
+    careCtx.setLineDash([]);
+
+    // Threshold labels
+    careCtx.fillStyle = 'rgba(29, 158, 117, 0.6)';
+    careCtx.font = '11px -apple-system, sans-serif';
+    careCtx.fillText('Healthy ≥ 60', 8, y60 - 4);
+    careCtx.fillStyle = 'rgba(217, 83, 79, 0.6)';
+    careCtx.fillText('Critical < 30', 8, y30 - 4);
+
+    const step = w / (history.length - 1);
+
+    // Area fill
+    careCtx.beginPath();
+    careCtx.moveTo(0, h);
+    history.forEach((v, i) => {
+      const x = i * step;
+      const y = h - (v / 100) * h;
+      careCtx.lineTo(x, y);
+    });
+    careCtx.lineTo(w, h);
+    careCtx.closePath();
+    const grad = careCtx.createLinearGradient(0, 0, 0, h);
+    grad.addColorStop(0, 'rgba(29, 158, 117, 0.3)');
+    grad.addColorStop(1, 'rgba(29, 158, 117, 0)');
+    careCtx.fillStyle = grad;
+    careCtx.fill();
+
+    // Line
+    careCtx.beginPath();
+    history.forEach((v, i) => {
+      const x = i * step;
+      const y = h - (v / 100) * h;
+      if (i === 0) careCtx.moveTo(x, y); else careCtx.lineTo(x, y);
+    });
+    careCtx.strokeStyle = '#1D9E75';
+    careCtx.lineWidth = 2.5;
+    careCtx.lineJoin = 'round';
+    careCtx.stroke();
+
+    // Current point
+    const lx = (history.length - 1) * step;
+    const ly = h - (history[history.length - 1] / 100) * h;
+    careCtx.beginPath();
+    careCtx.arc(lx, ly, 5, 0, Math.PI * 2);
+    careCtx.fillStyle = '#1D9E75';
+    careCtx.fill();
+    careCtx.strokeStyle = '#0D1412';
+    careCtx.lineWidth = 2;
+    careCtx.stroke();
+  }
+
+  // Axis
+  const careAxis = document.getElementById('care-axis');
+  ['24h ago', '18h', '12h', '6h', 'now'].forEach(l => {
+    const s = document.createElement('span');
+    s.textContent = l;
+    careAxis.appendChild(s);
+  });
+
+  // ============ ALERTS ============
+  function renderAlerts() {
+    const tb = document.getElementById('alerts-body');
+    tb.innerHTML = '';
+    alerts.forEach(a => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td class="ts">${a.t}</td>
+        <td class="sev-${a.sev}">${a.type}</td>
+        <td>${a.val}</td>
+        <td>${a.status}</td>
+      `;
+      tb.appendChild(tr);
+    });
+  }
+  renderAlerts();
+
+  // ============ SCENARIO ============
+  document.querySelectorAll('.scenario-care').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.scenario-care').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      scenario = btn.dataset.scenario;
+      currentIndex = target[scenario];
+      history.length = 0;
+      history.push(...genHistory(scenario));
+      drawCareTrend();
+    });
+  });
+
+  // ============ CSV EXPORT ============
+  document.getElementById('export-csv').addEventListener('click', () => {
+    const now = new Date();
+    let csv = 'timestamp,hydration_index,saliva_conductance_uS,bia_impedance_ohm,liquid_temp_c,ambient_temp_c\n';
+    history.forEach((v, i) => {
+      const ts = new Date(now.getTime() - (history.length - i) * 30 * 60 * 1000).toISOString();
+      const saliva = Math.round(2400 - v * 18);
+      const bia = Math.round(440 - v * 2.2);
+      const tliq = (18 + Math.random() * 2).toFixed(1);
+      const tamb = (24 + Math.random() * 6).toFixed(1);
+      csv += `${ts},${v.toFixed(1)},${saliva},${bia},${tliq},${tamb}\n`;
+    });
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `aquaalert_antonio_${now.toISOString().slice(0,10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+
+  // ============ TICK ============
+  function tick() {
+    const t = target[scenario];
+    currentIndex += (t - currentIndex) * 0.15 + (Math.random() - 0.5) * 4;
+    currentIndex = Math.max(5, Math.min(95, currentIndex));
+
+    setBigGauge(currentIndex);
+    setCareIndex(currentIndex);
+    setCareReadings(currentIndex);
+
+    history.shift();
+    history.push(currentIndex);
+    drawCareTrend();
+
+    const now = new Date();
+    const t2 = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+    document.getElementById('last-update').textContent = `Last update: ${t2}`;
+  }
+
+  // Init
+  setBigGauge(currentIndex);
+  setCareIndex(currentIndex);
+  setCareReadings(currentIndex);
+  drawCareTrend();
+  setInterval(tick, 3000);
+</script>
+
+</body>
+</html>
