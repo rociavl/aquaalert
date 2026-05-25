@@ -75,6 +75,9 @@ def main() -> None:
     ap.add_argument("--err-magnify", type=float, default=1.0,
                     help="exaggerate the curve's error bars by this factor so they "
                          "are visible (labelled on the plot); the lower panel stays 1:1")
+    ap.add_argument("--weighted", action="store_true",
+                    help="also fit weighted least squares (1/c^2 weights) and compare; "
+                         "recommended here because the variance grows with concentration")
     ap.add_argument("--show-saturated", action="store_true",
                     help="also plot the excluded saturated points")
     ap.add_argument("--no-bands", action="store_true",
@@ -146,13 +149,54 @@ def main() -> None:
         lo = excl_df[conc_col].min()
         print(f"  excluded {len(excl_df)} saturated measurements (>= {lo:.0f} {unit})")
 
+    # --- regression statistics (Miller & Miller; LibreTexts/Harvey 5.4) ---
+    n = len(c)
+    Sxx = float(np.sum((c - c.mean()) ** 2))
+    s_yx = float(np.sqrt(ss_res / (n - 2)))          # residual SD about the line
+    s_m = float(np.sqrt(s_yx ** 2 / Sxx))            # SD of slope
+    s_b = float(s_yx * np.sqrt(np.sum(c ** 2) / (n * Sxx)))   # SD of intercept
+    s_x0 = float((s_yx / abs(m)) * np.sqrt(1.0 + 1.0 / n))    # ±conc, single reading
+    dofw = fit_agg["n"] - 1
+    s_pool = float(np.sqrt(np.sum(dofw * fit_agg["std"] ** 2) / np.sum(dofw)))
+    lod, loq = 3.3 * s_yx / abs(m), 10.0 * s_yx / abs(m)
+    print("  --- regression statistics ---")
+    print(f"  residual SD s(y/x) = {s_yx*1000:.1f} mV  (df = {n-2})")
+    print(f"  pooled replicate SD = {s_pool*1000:.1f} mV")
+    print(f"  slope     m = {m:.6f} ± {s_m:.6f} V/{unit}")
+    print(f"  intercept b = {b:.4f} ± {s_b:.4f} V")
+    print(f"  prediction uncertainty s_x0 ≈ ±{s_x0:.0f} {unit} per single reading")
+    print(f"  LOD = {lod:.0f} {unit},  LOQ = {loq:.0f} {unit}")
+
+    # --- weighted least squares (1/c^2): better for heteroscedastic data ---
+    mw = bw = sgnw = None
+    if args.weighted:
+        w = 1.0 / c                                  # polyfit minimises (w*resid)^2
+        mw, bw = (float(x) for x in np.polyfit(c, v, 1, w=w))
+
+        def conc_err(mm, bb):
+            pe = np.abs(((v - bb) / mm - c) / c) * 100
+            band = (c >= 200) & (c <= 500)
+            return pe.mean(), (pe[band].mean() if band.any() else float("nan"))
+
+        u_all, u_hy = conc_err(m, b)
+        w_all, w_hy = conc_err(mw, bw)
+        sgnw = "-" if bw < 0 else "+"
+        print("  --- weighted (1/c²) vs ordinary least squares ---")
+        print(f"  weighted: V = {mw:.6f} * c {sgnw} {abs(bw):.4f}")
+        print(f"  mean |error| back-calculated concentration:")
+        print(f"      overall          OLS {u_all:4.1f} %  ->  WLS {w_all:4.1f} %")
+        print(f"      hydrated 200-500 OLS {u_hy:4.1f} %  ->  WLS {w_hy:4.1f} %")
+
     # two stacked panels: calibration curve (top) + spread in mV (bottom)
     fig, (ax, axb) = plt.subplots(2, 1, figsize=(7.8, 6.4), sharex=True,
                                   gridspec_kw={"height_ratios": [3, 1]})
 
     xs = np.linspace(c.min(), c.max(), 100)
     ax.plot(xs, m * xs + b, color="#2E5FD0", lw=1.8, zorder=3,
-            label=f"V = {m:.4f}·c {sign} {abs(b):.3f}\nR² = {r2:.3f}")
+            label=f"OLS: V = {m:.4f}·c {sign} {abs(b):.3f}\nR² = {r2:.3f}")
+    if args.weighted and mw is not None:
+        ax.plot(xs, mw * xs + bw, color="#E5402F", lw=1.4, ls="--", zorder=3,
+                label=f"WLS 1/c²: V = {mw:.4f}·c {sgnw} {abs(bw):.3f}")
 
     markers = {1: ("#0E2A4E", "o"), 2: ("#2E5FD0", "s")}
 
