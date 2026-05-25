@@ -7,25 +7,25 @@
 <style>
   :root {
     /* Light (senior) palette */
-    --ink: #14181B;
-    --ink-2: #3C434A;
-    --ink-3: #6B7178;
-    --paper: #F7F4EE;
-    --paper-2: #EFEAE0;
-    --rule-soft: #D8D1C4;
+    --ink: #16202E;
+    --ink-2: #3C4658;
+    --ink-3: #6B7686;
+    --paper: #F4F7FB;
+    --paper-2: #E9EEF5;
+    --rule-soft: #D5DEEA;
     /* Accents */
-    --teal: #1D6E5B;
-    --teal-deep: #134338;
-    --signal: #C26A1A;
-    --alarm: #B23A2F;
+    --teal: #2E5FD0;
+    --teal-deep: #244FB0;
+    --signal: #F5921E;
+    --alarm: #E5402F;
     /* Dark (caregiver) palette */
-    --night: #0F1316;
-    --night-2: #181D21;
-    --night-3: #20262B;
-    --night-rule: #2A3137;
-    --night-ink: #EDE7DA;
-    --night-ink-2: rgba(237, 231, 218, 0.62);
-    --night-ink-3: rgba(237, 231, 218, 0.4);
+    --night: #0C1424;
+    --night-2: #122036;
+    --night-3: #1A2B47;
+    --night-rule: #2A3C5A;
+    --night-ink: #E8EEF6;
+    --night-ink-2: rgba(232, 238, 246, 0.62);
+    --night-ink-3: rgba(232, 238, 246, 0.4);
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body { height: 100%; }
@@ -514,20 +514,20 @@
     width: 7px; height: 7px;
     border-radius: 50%;
     background: var(--teal);
-    box-shadow: 0 0 6px rgba(29, 110, 91, 0.6);
+    box-shadow: 0 0 6px rgba(46, 95, 208, 0.6);
   }
 </style>
 </head>
-<body class="mode-senior">
+<body class="mode-caregiver">
 
-<a href="index.html" class="back-link">← Back to monitor</a>
-<button class="mode-toggle" id="mode-toggle">Caregiver view</button>
+<a href="index.html" class="back-link">← Back to app</a>
+<button class="mode-toggle" id="mode-toggle">Senior view</button>
 
 <!-- ============ SENIOR MODE ============ -->
 <div class="senior-view">
   <div class="senior-wrap">
     <div class="greeting">Today</div>
-    <div class="greeting-name serif">Hello, Antonio.</div>
+    <div class="greeting-name serif">Hello, Laura.</div>
 
     <div class="big-gauge" id="big-gauge">
       <svg viewBox="0 0 200 200">
@@ -567,8 +567,8 @@
     <div class="care-header">
       <div>
         <div class="kicker">Patient #A-2026-0142 · Plan Calor enrolled</div>
-        <h1 class="serif">Antonio Martínez — live monitoring</h1>
-        <div class="meta">72 years · Barcelona · Primary caregiver: Carmen M.</div>
+        <h1 class="serif">Laura Giménez — live monitoring</h1>
+        <div class="meta">74 years · Barcelona · Primary caregiver: Carmen M.</div>
       </div>
       <button class="export-btn" id="export-csv">Export CSV</button>
     </div>
@@ -807,7 +807,7 @@
     const y60 = h - (60 / 100) * h;
     const y30 = h - (30 / 100) * h;
     careCtx.setLineDash([3, 4]);
-    careCtx.strokeStyle = 'rgba(29, 110, 91, 0.4)';
+    careCtx.strokeStyle = 'rgba(46, 95, 208, 0.4)';
     careCtx.beginPath(); careCtx.moveTo(0, y60); careCtx.lineTo(w, y60); careCtx.stroke();
     careCtx.strokeStyle = 'rgba(178, 58, 47, 0.4)';
     careCtx.beginPath(); careCtx.moveTo(0, y30); careCtx.lineTo(w, y30); careCtx.stroke();
@@ -826,8 +826,8 @@
     careCtx.lineTo(w, h);
     careCtx.closePath();
     const grad = careCtx.createLinearGradient(0, 0, 0, h);
-    grad.addColorStop(0, 'rgba(29, 110, 91, 0.25)');
-    grad.addColorStop(1, 'rgba(29, 110, 91, 0)');
+    grad.addColorStop(0, 'rgba(46, 95, 208, 0.25)');
+    grad.addColorStop(1, 'rgba(46, 95, 208, 0)');
     careCtx.fillStyle = grad;
     careCtx.fill();
 
@@ -836,7 +836,7 @@
       const x = i * step, y = h - (v / 100) * h;
       if (i === 0) careCtx.moveTo(x, y); else careCtx.lineTo(x, y);
     });
-    careCtx.strokeStyle = '#1D6E5B';
+    careCtx.strokeStyle = '#2E5FD0';
     careCtx.lineWidth = 1.8;
     careCtx.lineJoin = 'round';
     careCtx.stroke();
@@ -845,7 +845,7 @@
     const ly = h - (history[history.length - 1] / 100) * h;
     careCtx.beginPath();
     careCtx.arc(lx, ly, 3.5, 0, Math.PI * 2);
-    careCtx.fillStyle = '#1D6E5B';
+    careCtx.fillStyle = '#2E5FD0';
     careCtx.fill();
   }
 

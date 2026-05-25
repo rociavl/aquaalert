@@ -1,8 +1,6 @@
-# 🦦 AquaAlert
+# AquaAlert
 
-> Hydration that cares.
-
-Smart hydration monitoring system for elderly people during heat waves. Combines a saliva conductance sensor in a smart bottle with a bioelectrical impedance ankle wearable, fused into a single 0–100 hydration index with alerts to user and caregiver.
+Early-warning hydration monitoring for older adults during heat waves. Combines a saliva conductance sensor in a smart bottle with a bioelectrical impedance ankle wearable, fused into a single 0–100 hydration index with alerts to user and caregiver.
 
 **Course:** Medical Devices (295623), EEBE — Universitat Politècnica de Catalunya, 2025–2026.
 
@@ -27,9 +25,11 @@ Both stream data to a multimodal fusion algorithm that outputs the hydration ind
 ## Repository structure
 
 ```
-/index.html              ← public landing page
-/app/index.html          ← live demo simulator
-/app/dashboard.html      ← user + caregiver dashboard
+/index.html              ← the user app (mobile-first PWA) — this is the site root
+/dashboard.html          ← caregiver console (technical view)
+/pitch.html              ← project landing / pitch page (for the presentation)
+/manifest.webmanifest    ← PWA manifest (add-to-home-screen)
+/icon.svg, /icon-*.png   ← app icons
 /firmware/
   aquaalert_bia/         ← ESP32 firmware for ankle BIA
   aquaalert_saliva/      ← ESP32 firmware for bottle salivary conductance
@@ -42,7 +42,11 @@ Both stream data to a multimodal fusion algorithm that outputs the hydration ind
 
 ## Demo
 
-Live demo: https://rociavl.github.io/aquaalert *(once GitHub Pages is enabled)*
+The app is the GitHub Pages root — open it on a phone and add it to the home screen:
+
+- **App (user):** https://rociavl.github.io/aquaalert/
+- **Caregiver console:** https://rociavl.github.io/aquaalert/dashboard.html
+- **Project pitch:** https://rociavl.github.io/aquaalert/pitch.html
 
 ## Market context
 
