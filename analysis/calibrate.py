@@ -48,6 +48,8 @@ def main() -> None:
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--csv", type=Path, default=DEFAULT_CSV)
     ap.add_argument("--out", type=Path, default=ROOT / "docs" / "calibration_curve.png")
+    ap.add_argument("--show-saturated", action="store_true",
+                    help="also plot the excluded saturated points")
     args = ap.parse_args()
 
     if not args.csv.exists():
@@ -106,7 +108,7 @@ def main() -> None:
     else:
         ax.scatter(c, v, color="#0E2A4E", s=46, zorder=5, label="in fit")
 
-    if len(excl_df):
+    if args.show_saturated and len(excl_df):
         ax.scatter(excl_df[conc_col], excl_df[SIGNAL], facecolors="none",
                    edgecolors="#B23A2F", s=46, zorder=4, label="saturated (excluded)")
         ax.axhline(2.3, color="#B23A2F", ls=":", lw=1, alpha=0.6)
