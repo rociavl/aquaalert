@@ -6,24 +6,27 @@ firmware's ppm value is unreliable. Calibration therefore relates the
 temperature-compensated electrode *voltage* to the known reference
 concentration of each solution.
 
-Reads ../data/calibration.csv:
+Reads ../data/calibration_replicates.csv (one row per measurement):
 
-    concentration_ppm,voltage_compensated_V,in_fit,note
-    180,0.385,1,
+    concentration_ppm,voltage_compensated_V,day,in_fit,note
+    180,0.380,1,1,
+    180,0.389,1,1,
+    180,0.386,1,1,
     ...
-    1820,2.270,0,saturated
 
-The optional `in_fit` column (1/0) excludes saturated points from the
-linear fit while still plotting them, so the working range is honest.
-Also accepts `concentration_g_L` instead of `concentration_ppm`.
+Replicates of the same concentration are averaged; the plot shows the mean
+with ±1 SD error bars so the sensor's repeatability is visible. The optional
+`in_fit` column (1/0) excludes saturated points from the linear fit while
+still letting them be plotted. Also accepts `concentration_g_L`.
 
-Fits V = m·c + b over the in-fit points, reports R² and sensitivity, and
-saves the curve to ../docs for the report.
+Fits V = m·c + b over the in-fit measurements, reports R², sensitivity and
+repeatability (mean SD / CV), and saves the curve to ../docs for the report.
 
 Examples
 --------
     python calibrate.py
-    python calibrate.py --csv ../data/calibration.csv
+    python calibrate.py --csv ../data/calibration_replicates.csv
+    python calibrate.py --show-saturated
 """
 from __future__ import annotations
 
@@ -39,7 +42,9 @@ except ImportError:
     sys.exit("Missing deps. Run:  pip install -r requirements.txt")
 
 ROOT = Path(__file__).resolve().parent.parent
-DEFAULT_CSV = ROOT / "data" / "calibration.csv"
+REPLICATES_CSV = ROOT / "data" / "calibration_replicates.csv"
+MEANS_CSV = ROOT / "data" / "calibration.csv"
+DEFAULT_CSV = REPLICATES_CSV if REPLICATES_CSV.exists() else MEANS_CSV
 SIGNAL = "voltage_compensated_V"
 
 
@@ -72,47 +77,66 @@ def main() -> None:
     else:
         fit_df, excl_df = df, df.iloc[0:0]
 
+    def agg_by_day(d: pd.DataFrame) -> pd.DataFrame:
+        """Mean / SD / n of the signal per concentration (and per day if present)."""
+        keys = [conc_col] + (["day"] if "day" in d.columns else [])
+        a = (d.groupby(keys, as_index=False)[SIGNAL]
+               .agg(mean="mean", std="std", n="count"))
+        a["std"] = a["std"].fillna(0.0)  # single-replicate points -> SD 0
+        return a.sort_values(conc_col)
+
+    # --- fit over the individual in-fit measurements (honest scatter) ---
     c = fit_df[conc_col].to_numpy(float)
     v = fit_df[SIGNAL].to_numpy(float)
     if len(c) < 2:
-        sys.exit("Need at least two in-fit solutions to fit a line.")
+        sys.exit("Need at least two in-fit measurements to fit a line.")
 
-    # linear least squares: V = m*c + b
-    m, b = np.polyfit(c, v, 1)
+    m, b = np.polyfit(c, v, 1)            # V = m*c + b
     pred = m * c + b
     ss_res = float(np.sum((v - pred) ** 2))
     ss_tot = float(np.sum((v - v.mean()) ** 2))
     r2 = 1 - ss_res / ss_tot if ss_tot else float("nan")
 
+    fit_agg = agg_by_day(fit_df)
+    cv = (fit_agg["std"] / fit_agg["mean"]).replace([np.inf, -np.inf], np.nan) * 100
+
     sign = "-" if b < 0 else "+"
-    print(f"Fit over {len(c)} points ({c.min():.0f}–{c.max():.0f} {unit}):")
+    print(f"Fit over {len(c)} measurements in {len(fit_agg)} solutions "
+          f"({c.min():.0f}–{c.max():.0f} {unit}):")
     print(f"  V = {m:.6f} * c {sign} {abs(b):.4f}     (c in {unit}, V in volts)")
     print(f"  R²  = {r2:.4f}")
     print(f"  sensitivity = {m * 1000:.3f} mV per {unit}")
+    print(f"  repeatability: mean SD = {fit_agg['std'].mean() * 1000:.1f} mV, "
+          f"mean CV = {cv.mean():.1f} %")
     if m:
         print(f"  inverse: c = (V - {b:.4f}) / {m:.6f}")
     if len(excl_df):
         lo = excl_df[conc_col].min()
-        print(f"  excluded {len(excl_df)} saturated points (>= {lo:.0f} {unit})")
+        print(f"  excluded {len(excl_df)} saturated measurements (>= {lo:.0f} {unit})")
 
     fig, ax = plt.subplots(figsize=(7.8, 5))
     xs = np.linspace(c.min(), c.max(), 100)
     ax.plot(xs, m * xs + b, color="#2E5FD0", lw=1.8, zorder=3,
             label=f"V = {m:.4f}·c {sign} {abs(b):.3f}\nR² = {r2:.3f}")
 
-    # in-fit points, coloured by experiment day if that column is present
-    if "day" in fit_df.columns:
+    # in-fit points: mean ± 1 SD error bars, coloured by experiment day
+    if "day" in fit_agg.columns:
         markers = {1: ("#0E2A4E", "o"), 2: ("#2E5FD0", "s")}
-        for d, grp in fit_df.groupby("day"):
+        for d, grp in fit_agg.groupby("day"):
             color, mk = markers.get(int(d), ("#0E2A4E", "o"))
-            ax.scatter(grp[conc_col], grp[SIGNAL], color=color, marker=mk,
-                       s=46, zorder=5, label=f"day {int(d)}")
+            ax.errorbar(grp[conc_col], grp["mean"], yerr=grp["std"], fmt=mk,
+                        color=color, ms=6, lw=0, elinewidth=1.2, capsize=3,
+                        ecolor=color, zorder=5, label=f"day {int(d)} (mean ± SD)")
     else:
-        ax.scatter(c, v, color="#0E2A4E", s=46, zorder=5, label="in fit")
+        ax.errorbar(fit_agg[conc_col], fit_agg["mean"], yerr=fit_agg["std"], fmt="o",
+                    color="#0E2A4E", ms=6, lw=0, elinewidth=1.2, capsize=3,
+                    zorder=5, label="mean ± SD")
 
     if args.show_saturated and len(excl_df):
-        ax.scatter(excl_df[conc_col], excl_df[SIGNAL], facecolors="none",
-                   edgecolors="#B23A2F", s=46, zorder=4, label="saturated (excluded)")
+        ex_agg = agg_by_day(excl_df)
+        ax.errorbar(ex_agg[conc_col], ex_agg["mean"], yerr=ex_agg["std"], fmt="o",
+                    mfc="none", mec="#B23A2F", ecolor="#B23A2F", ms=6, lw=0,
+                    elinewidth=1.2, capsize=3, zorder=4, label="saturated (excluded)")
         ax.axhline(2.3, color="#B23A2F", ls=":", lw=1, alpha=0.6)
         ax.text(df[conc_col].max(), 2.31, "sensor ceiling ~2.3 V",
                 ha="right", va="bottom", fontsize=8, color="#B23A2F")
@@ -136,7 +160,7 @@ def main() -> None:
 
     ax.set_xlabel(f"reference concentration ({unit})  ·  bands: HydroSense salivary thresholds")
     ax.set_ylabel("compensated voltage (V)")
-    ax.set_title("AquaAlert — TDS sensor calibration (NaCl)")
+    ax.set_title("AquaAlert — TDS sensor calibration (NaCl), mean ± SD")
     ax.grid(True, alpha=0.2)
     ax.legend(loc="lower right", frameon=False)
     fig.tight_layout()
