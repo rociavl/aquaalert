@@ -31,13 +31,15 @@ Both stream data to a multimodal fusion algorithm that outputs the hydration ind
 /manifest.webmanifest    ← PWA manifest (add-to-home-screen)
 /icon.svg, /icon-*.png   ← app icons
 /firmware/
-  aquaalert_bia/         ← ESP32 firmware for ankle BIA
-  aquaalert_saliva/      ← ESP32 firmware for bottle salivary conductance
+  aquaalert_tds_calibration/  ← ESP32 firmware for bottle TDS/conductance (used)
+  aquaalert_bia/              ← ESP32 firmware for ankle BIA (needs bench tuning)
 /analysis/
-  read_serial.py         ← real-time serial capture → CSV
-  plot_results.py        ← matplotlib analysis of experiment data
+  read_serial.py         ← serial capture → timestamped CSV
+  plot_results.py        ← time-series plot of a capture
+  calibrate.py           ← NaCl calibration curve (voltage vs concentration)
+  requirements.txt       ← pyserial, pandas, numpy, matplotlib
 /data/                   ← experimental CSV results
-/docs/                   ← compiled LaTeX reports
+/docs/                   ← compiled LaTeX reports + generated figures
 ```
 
 ## Demo
