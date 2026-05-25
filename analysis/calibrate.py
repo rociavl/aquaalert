@@ -72,6 +72,9 @@ def main() -> None:
     ap.add_argument("--out", type=Path, default=ROOT / "docs" / "calibration_curve.png")
     ap.add_argument("--error", choices=["sd", "sem", "ci"], default="sd",
                     help="error bars: sd (spread), sem (SD/sqrt n), ci (95%% t-interval)")
+    ap.add_argument("--err-magnify", type=float, default=1.0,
+                    help="exaggerate the curve's error bars by this factor so they "
+                         "are visible (labelled on the plot); the lower panel stays 1:1")
     ap.add_argument("--show-saturated", action="store_true",
                     help="also plot the excluded saturated points")
     ap.add_argument("--no-bands", action="store_true",
@@ -153,10 +156,12 @@ def main() -> None:
 
     markers = {1: ("#0E2A4E", "o"), 2: ("#2E5FD0", "s")}
 
+    mag = args.err_magnify
+
     def plot_group(grp, color, mk, lbl, *, hollow=False, on=ax):
-        on.errorbar(grp[conc_col], grp["mean"], yerr=grp["err"], fmt=mk,
-                    color=color, ms=6, lw=0, elinewidth=1.2, capsize=3,
-                    ecolor=color, zorder=5, label=lbl,
+        on.errorbar(grp[conc_col], grp["mean"], yerr=grp["err"] * mag, fmt=mk,
+                    color=color, ms=3, lw=0, elinewidth=1.0, capsize=2,
+                    ecolor=color, zorder=4, label=lbl,
                     mfc=("none" if hollow else color), mec=color)
 
     # top panel: mean ± error, coloured by experiment day
@@ -192,7 +197,10 @@ def main() -> None:
         ax.set_xlim(x0, x1)
 
     ax.set_ylabel("compensated voltage (V)")
-    ax.set_title(f"AquaAlert — TDS sensor calibration (NaCl), mean ± {elabel}")
+    title = f"AquaAlert — TDS sensor calibration (NaCl), mean ± {elabel}"
+    if mag != 1:
+        title += f"  (error bars ×{mag:g})"
+    ax.set_title(title)
     ax.grid(True, alpha=0.2)
     ax.legend(loc="lower right", frameon=False)
 
