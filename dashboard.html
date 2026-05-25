@@ -598,8 +598,8 @@
         <h3>Live sensor readings</h3>
         <div class="readings-list">
           <div class="reading-row">
-            <span class="key">Saliva conductance<span class="range">750–2000</span></span>
-            <span class="val"><span id="c-saliva">—</span><span class="unit">µS</span></span>
+            <span class="key">Salivary TDS<span class="range">hyd &lt;500 · mild 700 · sev ≥900</span></span>
+            <span class="val"><span id="c-saliva">—</span><span class="unit">ppm</span></span>
           </div>
           <div class="reading-row">
             <span class="key">Ankle BIA impedance<span class="range">200–400</span></span>
@@ -774,13 +774,18 @@
   }
 
   function setCareReadings(value) {
-    const saliva = Math.round(2400 - value * 18 + (Math.random() - 0.5) * 80);
+    // Map the 0–100 index to salivary TDS using HydroSense thresholds
+    // (IJSRSET 2025): ~200 ppm fully hydrated → ~1100 ppm severe.
+    const tds = Math.round(200 + (100 - value) * 9 + (Math.random() - 0.5) * 30);
     const bia = Math.round(440 - value * 2.2 + (Math.random() - 0.5) * 10);
     const tliq = (18 + Math.random() * 2).toFixed(1);
     const tamb = scenario === 'normal' ? (24 + Math.random() * 2).toFixed(1)
                 : scenario === 'warning' ? (34 + Math.random() * 2).toFixed(1)
                 : (39 + Math.random() * 2).toFixed(1);
-    document.getElementById('c-saliva').textContent = saliva;
+    const salivaEl = document.getElementById('c-saliva');
+    salivaEl.textContent = tds;
+    salivaEl.style.color = tds < 500 ? 'var(--teal)' : tds < 700 ? 'var(--signal)'
+                         : tds < 900 ? 'var(--signal)' : 'var(--alarm)';
     document.getElementById('c-bia').textContent = bia;
     document.getElementById('c-tliq').textContent = tliq;
     document.getElementById('c-tamb').textContent = tamb;
@@ -886,14 +891,14 @@
 
   document.getElementById('export-csv').addEventListener('click', () => {
     const now = new Date();
-    let csv = 'timestamp,hydration_index,saliva_conductance_uS,bia_impedance_ohm,liquid_temp_c,ambient_temp_c\n';
+    let csv = 'timestamp,hydration_index,salivary_tds_ppm,bia_impedance_ohm,liquid_temp_c,ambient_temp_c\n';
     history.forEach((v, i) => {
       const ts = new Date(now.getTime() - (history.length - i) * 30 * 60 * 1000).toISOString();
-      const saliva = Math.round(2400 - v * 18);
+      const tds = Math.round(200 + (100 - v) * 9);
       const bia = Math.round(440 - v * 2.2);
       const tliq = (18 + Math.random() * 2).toFixed(1);
       const tamb = (24 + Math.random() * 6).toFixed(1);
-      csv += `${ts},${v.toFixed(1)},${saliva},${bia},${tliq},${tamb}\n`;
+      csv += `${ts},${v.toFixed(1)},${tds},${bia},${tliq},${tamb}\n`;
     });
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);

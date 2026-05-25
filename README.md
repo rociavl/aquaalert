@@ -17,6 +17,7 @@ Both stream data to a multimodal fusion algorithm that outputs the hydration ind
 
 ## Scientific basis
 
+- **HydroSense — Manoj Prabu et al. 2025** *(IJSRSET 12(6):13–18, [doi:10.32628/IJSRSET2513816](https://doi.org/10.32628/IJSRSET2513816))* — **foundational paper.** Saliva pH + TDS on Arduino classifies dehydration. Salivary TDS thresholds: hydrated 200–500, mild 500–700, moderate 700–900, severe ≥900 ppm. AquaAlert's bottle sensor builds on this and adopts its thresholds; the NaCl calibration confirms the sensor is linear across this whole range (saturating only at ~900 ppm, the severe threshold).
 - **Lu et al. 2019** *(Scientific Reports)* — gold coplanar electrodes + salivary conductance detect dehydration; sensitivity 86%, specificity 91% vs serum osmolality.
 - **PMC 2021** *(N=20, 13 h)* — salivary conductivity rises with water restriction, falls after 1000 mL rehydration. Correlates with urinary osmolality, thirst scale, body weight.
 - **Dasgupta 2018** — ankle tetrapolar BIA at 50 kHz validated for total body water (R=0.97 vs gold standard).

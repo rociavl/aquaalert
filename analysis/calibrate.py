@@ -50,6 +50,8 @@ def main() -> None:
     ap.add_argument("--out", type=Path, default=ROOT / "docs" / "calibration_curve.png")
     ap.add_argument("--show-saturated", action="store_true",
                     help="also plot the excluded saturated points")
+    ap.add_argument("--no-bands", action="store_true",
+                    help="hide the HydroSense salivary hydration bands")
     args = ap.parse_args()
 
     if not args.csv.exists():
@@ -115,10 +117,27 @@ def main() -> None:
         ax.text(df[conc_col].max(), 2.31, "sensor ceiling ~2.3 V",
                 ha="right", va="bottom", fontsize=8, color="#B23A2F")
 
-    ax.set_xlabel(f"reference concentration ({unit})")
+    # HydroSense (IJSRSET 2025) salivary hydration bands, in ppm TDS
+    if not args.no_bands and unit == "ppm":
+        x0, x1 = ax.get_xlim()
+        bands = [(200, 500, "#2FB457", "hydrated"),
+                 (500, 700, "#F2C200", "mild"),
+                 (700, 900, "#F5921E", "moderate"),
+                 (900, 1e9, "#E5402F", "severe")]
+        ytop = ax.get_ylim()[1]
+        for lo, hi, col, lbl in bands:
+            a, bb = max(lo, x0), min(hi, x1)
+            if a >= bb:
+                continue
+            ax.axvspan(a, bb, color=col, alpha=0.08, zorder=0)
+            ax.text((a + bb) / 2, ytop * 0.98, lbl, ha="center", va="top",
+                    fontsize=7.5, color=col, alpha=0.9)
+        ax.set_xlim(x0, x1)
+
+    ax.set_xlabel(f"reference concentration ({unit})  ·  bands: HydroSense salivary thresholds")
     ax.set_ylabel("compensated voltage (V)")
     ax.set_title("AquaAlert — TDS sensor calibration (NaCl)")
-    ax.grid(True, alpha=0.25)
+    ax.grid(True, alpha=0.2)
     ax.legend(loc="lower right", frameon=False)
     fig.tight_layout()
 

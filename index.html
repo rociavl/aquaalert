@@ -692,11 +692,23 @@
 
 <script>
   // ---- State ----
+  // Hydration state is derived from the salivary TDS, using the thresholds
+  // from HydroSense (Manoj Prabu et al., IJSRSET 2025): hydrated 200–500,
+  // mild 500–700, moderate 700–900, severe ≥900 ppm. The "hydrated" band is
+  // split into Óptimo (<350) and Bueno (350–500) for the 5-level display.
+  function stateFromTDS(tds) {
+    if (tds < 350) return { level: 'optimo',       state: 'Óptimo',       color: 'var(--green)',  sub: 'Hidratación excelente' };
+    if (tds < 500) return { level: 'bueno',        state: 'Bueno',        color: 'var(--green)',  sub: 'Estás bien hidratado' };
+    if (tds < 700) return { level: 'moderado',     state: 'Moderado',     color: 'var(--yellow)', sub: 'Tu hidratación está bajando' };
+    if (tds < 900) return { level: 'bajo',         state: 'Bajo',         color: 'var(--orange)', sub: 'Necesitas beber agua ya' };
+    return            { level: 'deshidratado', state: 'Deshidratado', color: 'var(--red)',    sub: 'Deshidratación — avisando al cuidador' };
+  }
+
   let scenario = 'normal';
   const scenarios = {
-    normal:   { index: 78, state: 'Bueno',     level: 'bueno',      sub: 'Estás bien hidratado',          color: 'var(--green)',  reco: 'Hace calor hoy. Aumenta tu ingesta de agua a lo largo del día.' },
-    warning:  { index: 48, state: 'Moderado',  level: 'moderado',   sub: 'Tu hidratación está bajando',    color: 'var(--yellow)', reco: 'Alerta de calor activa. Bebe un vaso ahora y otro en 30 minutos.' },
-    critical: { index: 22, state: 'Bajo',      level: 'bajo',       sub: 'Necesitas beber agua ya',        color: 'var(--orange)', reco: 'Hidratación crítica. Hemos avisado a Carmen. Bebe agua de inmediato.' }
+    normal:   { tds: 420, reco: 'Hace calor hoy. Aumenta tu ingesta de agua a lo largo del día.' },
+    warning:  { tds: 620, reco: 'Alerta de calor activa. Bebe un vaso ahora y otro en 30 minutos.' },
+    critical: { tds: 950, reco: 'Hidratación crítica. Hemos avisado a Carmen. Bebe agua de inmediato.' }
   };
   let litersNow = 1.6;
   const litersGoal = 2.5;
@@ -716,15 +728,16 @@
   // ---- Apply scenario ----
   function applyScenario() {
     const s = scenarios[scenario];
-    document.getElementById('drop-state').textContent = s.state;
-    document.getElementById('drop-state').style.color = s.color;
-    document.getElementById('drop-sub').textContent = s.sub;
+    const st = stateFromTDS(s.tds);
+    document.getElementById('drop-state').textContent = st.state;
+    document.getElementById('drop-state').style.color = st.color;
+    document.getElementById('drop-sub').textContent = st.sub;
     document.getElementById('reco-text').textContent = s.reco;
     // legend current
     document.querySelectorAll('.legend-item').forEach(li => {
-      li.classList.toggle('current', li.dataset.level === s.level);
+      li.classList.toggle('current', li.dataset.level === st.level);
     });
-    placeMarker(s.level);
+    placeMarker(st.level);
   }
 
   // ---- Progress ring ----
