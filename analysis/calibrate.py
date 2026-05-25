@@ -15,9 +15,11 @@ Reads ../data/calibration_replicates.csv (one row per measurement):
     ...
 
 Replicates of the same concentration are averaged; the plot shows the mean
-with ±1 SD error bars so the sensor's repeatability is visible. The optional
-`in_fit` column (1/0) excludes saturated points from the linear fit while
-still letting them be plotted. Also accepts `concentration_g_L`.
+with error bars (--error sd|sem|ci). Because repeatability is high the bars
+are tiny on the V axis, so a lower panel plots the spread (in mV) per
+concentration where it is actually visible. The optional `in_fit` column
+(1/0) excludes saturated points from the linear fit while still letting them
+be plotted. Also accepts `concentration_g_L`.
 
 Fits V = m·c + b over the in-fit measurements, reports R², sensitivity and
 repeatability (mean SD / CV), and saves the curve to ../docs for the report.
@@ -25,7 +27,7 @@ repeatability (mean SD / CV), and saves the curve to ../docs for the report.
 Examples
 --------
     python calibrate.py
-    python calibrate.py --csv ../data/calibration_replicates.csv
+    python calibrate.py --error sem
     python calibrate.py --show-saturated
 """
 from __future__ import annotations
@@ -46,6 +48,21 @@ REPLICATES_CSV = ROOT / "data" / "calibration_replicates.csv"
 MEANS_CSV = ROOT / "data" / "calibration.csv"
 DEFAULT_CSV = REPLICATES_CSV if REPLICATES_CSV.exists() else MEANS_CSV
 SIGNAL = "voltage_compensated_V"
+ERR_LABEL = {"sd": "SD", "sem": "SEM", "ci": "95% CI"}
+
+
+def tcrit(n: int, conf: float = 0.95) -> float:
+    """Two-sided Student-t critical value for n replicates (df = n-1)."""
+    df = n - 1
+    if df < 1:
+        return 0.0
+    try:
+        from scipy import stats
+        return float(stats.t.ppf(1 - (1 - conf) / 2, df))
+    except Exception:
+        table = {1: 12.71, 2: 4.303, 3: 3.182, 4: 2.776, 5: 2.571,
+                 6: 2.447, 7: 2.365, 8: 2.306, 9: 2.262, 10: 2.228}
+        return table.get(df, 1.96)
 
 
 def main() -> None:
@@ -53,6 +70,8 @@ def main() -> None:
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--csv", type=Path, default=DEFAULT_CSV)
     ap.add_argument("--out", type=Path, default=ROOT / "docs" / "calibration_curve.png")
+    ap.add_argument("--error", choices=["sd", "sem", "ci"], default="sd",
+                    help="error bars: sd (spread), sem (SD/sqrt n), ci (95%% t-interval)")
     ap.add_argument("--show-saturated", action="store_true",
                     help="also plot the excluded saturated points")
     ap.add_argument("--no-bands", action="store_true",
@@ -77,12 +96,19 @@ def main() -> None:
     else:
         fit_df, excl_df = df, df.iloc[0:0]
 
-    def agg_by_day(d: pd.DataFrame) -> pd.DataFrame:
-        """Mean / SD / n of the signal per concentration (and per day if present)."""
+    def aggregate(d: pd.DataFrame) -> pd.DataFrame:
+        """Mean / SD / n (+ chosen error bar) of the signal per concentration."""
         keys = [conc_col] + (["day"] if "day" in d.columns else [])
         a = (d.groupby(keys, as_index=False)[SIGNAL]
                .agg(mean="mean", std="std", n="count"))
-        a["std"] = a["std"].fillna(0.0)  # single-replicate points -> SD 0
+        a["std"] = a["std"].fillna(0.0)        # single-replicate points -> SD 0
+        sem = a["std"] / np.sqrt(a["n"].clip(lower=1))
+        if args.error == "sd":
+            a["err"] = a["std"]
+        elif args.error == "sem":
+            a["err"] = sem
+        else:  # ci
+            a["err"] = a["n"].apply(lambda nn: tcrit(int(nn))) * sem
         return a.sort_values(conc_col)
 
     # --- fit over the individual in-fit measurements (honest scatter) ---
@@ -97,10 +123,11 @@ def main() -> None:
     ss_tot = float(np.sum((v - v.mean()) ** 2))
     r2 = 1 - ss_res / ss_tot if ss_tot else float("nan")
 
-    fit_agg = agg_by_day(fit_df)
+    fit_agg = aggregate(fit_df)
     cv = (fit_agg["std"] / fit_agg["mean"]).replace([np.inf, -np.inf], np.nan) * 100
 
     sign = "-" if b < 0 else "+"
+    elabel = ERR_LABEL[args.error]
     print(f"Fit over {len(c)} measurements in {len(fit_agg)} solutions "
           f"({c.min():.0f}–{c.max():.0f} {unit}):")
     print(f"  V = {m:.6f} * c {sign} {abs(b):.4f}     (c in {unit}, V in volts)")
@@ -108,35 +135,41 @@ def main() -> None:
     print(f"  sensitivity = {m * 1000:.3f} mV per {unit}")
     print(f"  repeatability: mean SD = {fit_agg['std'].mean() * 1000:.1f} mV, "
           f"mean CV = {cv.mean():.1f} %")
+    print(f"  error bars shown = {elabel} (range {fit_agg['err'].min()*1000:.1f}"
+          f"–{fit_agg['err'].max()*1000:.1f} mV)")
     if m:
         print(f"  inverse: c = (V - {b:.4f}) / {m:.6f}")
     if len(excl_df):
         lo = excl_df[conc_col].min()
         print(f"  excluded {len(excl_df)} saturated measurements (>= {lo:.0f} {unit})")
 
-    fig, ax = plt.subplots(figsize=(7.8, 5))
+    # two stacked panels: calibration curve (top) + spread in mV (bottom)
+    fig, (ax, axb) = plt.subplots(2, 1, figsize=(7.8, 6.4), sharex=True,
+                                  gridspec_kw={"height_ratios": [3, 1]})
+
     xs = np.linspace(c.min(), c.max(), 100)
     ax.plot(xs, m * xs + b, color="#2E5FD0", lw=1.8, zorder=3,
             label=f"V = {m:.4f}·c {sign} {abs(b):.3f}\nR² = {r2:.3f}")
 
-    # in-fit points: mean ± 1 SD error bars, coloured by experiment day
+    markers = {1: ("#0E2A4E", "o"), 2: ("#2E5FD0", "s")}
+
+    def plot_group(grp, color, mk, lbl, *, hollow=False, on=ax):
+        on.errorbar(grp[conc_col], grp["mean"], yerr=grp["err"], fmt=mk,
+                    color=color, ms=6, lw=0, elinewidth=1.2, capsize=3,
+                    ecolor=color, zorder=5, label=lbl,
+                    mfc=("none" if hollow else color), mec=color)
+
+    # top panel: mean ± error, coloured by experiment day
     if "day" in fit_agg.columns:
-        markers = {1: ("#0E2A4E", "o"), 2: ("#2E5FD0", "s")}
         for d, grp in fit_agg.groupby("day"):
             color, mk = markers.get(int(d), ("#0E2A4E", "o"))
-            ax.errorbar(grp[conc_col], grp["mean"], yerr=grp["std"], fmt=mk,
-                        color=color, ms=6, lw=0, elinewidth=1.2, capsize=3,
-                        ecolor=color, zorder=5, label=f"day {int(d)} (mean ± SD)")
+            plot_group(grp, color, mk, f"day {int(d)} (mean ± {elabel})")
     else:
-        ax.errorbar(fit_agg[conc_col], fit_agg["mean"], yerr=fit_agg["std"], fmt="o",
-                    color="#0E2A4E", ms=6, lw=0, elinewidth=1.2, capsize=3,
-                    zorder=5, label="mean ± SD")
+        plot_group(fit_agg, "#0E2A4E", "o", f"mean ± {elabel}")
 
     if args.show_saturated and len(excl_df):
-        ex_agg = agg_by_day(excl_df)
-        ax.errorbar(ex_agg[conc_col], ex_agg["mean"], yerr=ex_agg["std"], fmt="o",
-                    mfc="none", mec="#B23A2F", ecolor="#B23A2F", ms=6, lw=0,
-                    elinewidth=1.2, capsize=3, zorder=4, label="saturated (excluded)")
+        ex_agg = aggregate(excl_df)
+        plot_group(ex_agg, "#B23A2F", "o", "saturated (excluded)", hollow=True)
         ax.axhline(2.3, color="#B23A2F", ls=":", lw=1, alpha=0.6)
         ax.text(df[conc_col].max(), 2.31, "sensor ceiling ~2.3 V",
                 ha="right", va="bottom", fontsize=8, color="#B23A2F")
@@ -158,13 +191,29 @@ def main() -> None:
                     fontsize=7.5, color=col, alpha=0.9)
         ax.set_xlim(x0, x1)
 
-    ax.set_xlabel(f"reference concentration ({unit})  ·  bands: HydroSense salivary thresholds")
     ax.set_ylabel("compensated voltage (V)")
-    ax.set_title("AquaAlert — TDS sensor calibration (NaCl), mean ± SD")
+    ax.set_title(f"AquaAlert — TDS sensor calibration (NaCl), mean ± {elabel}")
     ax.grid(True, alpha=0.2)
     ax.legend(loc="lower right", frameon=False)
-    fig.tight_layout()
 
+    # bottom panel: the spread itself, in mV, where it is actually visible
+    mean_err_mv = fit_agg["err"].mean() * 1000
+    for d, grp in (fit_agg.groupby("day") if "day" in fit_agg.columns
+                   else [(None, fit_agg)]):
+        color, mk = markers.get(int(d), ("#0E2A4E", "o")) if d is not None \
+            else ("#0E2A4E", "o")
+        axb.vlines(grp[conc_col], 0, grp["err"] * 1000, color=color, lw=1.2, alpha=0.6)
+        axb.scatter(grp[conc_col], grp["err"] * 1000, color=color, marker=mk, s=28,
+                    zorder=5)
+    axb.axhline(mean_err_mv, color="#888", ls="--", lw=1,
+                label=f"mean {elabel} = {mean_err_mv:.1f} mV")
+    axb.set_ylim(bottom=0)
+    axb.set_xlabel(f"reference concentration ({unit})  ·  bands: HydroSense salivary thresholds")
+    axb.set_ylabel(f"± {elabel} (mV)")
+    axb.grid(True, alpha=0.2)
+    axb.legend(loc="upper left", frameon=False, fontsize=8)
+
+    fig.tight_layout()
     args.out.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(args.out, dpi=150)
     print(f"Saved curve -> {args.out}")
