@@ -80,8 +80,9 @@ def main() -> None:
     ss_tot = float(np.sum((v - v.mean()) ** 2))
     r2 = 1 - ss_res / ss_tot if ss_tot else float("nan")
 
+    sign = "-" if b < 0 else "+"
     print(f"Fit over {len(c)} points ({c.min():.0f}–{c.max():.0f} {unit}):")
-    print(f"  V = {m:.6f} * c + {b:.4f}     (c in {unit}, V in volts)")
+    print(f"  V = {m:.6f} * c {sign} {abs(b):.4f}     (c in {unit}, V in volts)")
     print(f"  R²  = {r2:.4f}")
     print(f"  sensitivity = {m * 1000:.3f} mV per {unit}")
     if m:
@@ -93,8 +94,18 @@ def main() -> None:
     fig, ax = plt.subplots(figsize=(7.8, 5))
     xs = np.linspace(c.min(), c.max(), 100)
     ax.plot(xs, m * xs + b, color="#2E5FD0", lw=1.8, zorder=3,
-            label=f"V = {m:.4f}·c + {b:.3f}\nR² = {r2:.3f}")
-    ax.scatter(c, v, color="#0E2A4E", s=46, zorder=5, label="in fit")
+            label=f"V = {m:.4f}·c {sign} {abs(b):.3f}\nR² = {r2:.3f}")
+
+    # in-fit points, coloured by experiment day if that column is present
+    if "day" in fit_df.columns:
+        markers = {1: ("#0E2A4E", "o"), 2: ("#2E5FD0", "s")}
+        for d, grp in fit_df.groupby("day"):
+            color, mk = markers.get(int(d), ("#0E2A4E", "o"))
+            ax.scatter(grp[conc_col], grp[SIGNAL], color=color, marker=mk,
+                       s=46, zorder=5, label=f"day {int(d)}")
+    else:
+        ax.scatter(c, v, color="#0E2A4E", s=46, zorder=5, label="in fit")
+
     if len(excl_df):
         ax.scatter(excl_df[conc_col], excl_df[SIGNAL], facecolors="none",
                    edgecolors="#B23A2F", s=46, zorder=4, label="saturated (excluded)")
