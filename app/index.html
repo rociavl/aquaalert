@@ -1,668 +1,870 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AquaAlert — Live monitor (demo)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>AquaAlert</title>
 <style>
   :root {
-    --ink: #14181B;
-    --ink-2: #3C434A;
-    --ink-3: #6B7178;
-    --paper: #F7F4EE;
-    --paper-2: #EFEAE0;
-    --rule: #1F2225;
-    --rule-soft: #D8D1C4;
-    --teal: #1D6E5B;
-    --teal-deep: #134338;
-    --signal: #C26A1A;
-    --alarm: #B23A2F;
+    --bg: #E9EEF4;
+    --navy: #0E2A4E;
+    --navy-2: #143869;
+    --blue: #2E5FD0;
+    --blue-deep: #244FB0;
+    --blue-soft: #E7EEFB;
+    --white: #FFFFFF;
+    --ink: #16202E;
+    --ink-2: #5B6675;
+    --ink-3: #93A0B0;
+    --line: #EAEEF3;
+    --green: #2FB457;
+    --yellow: #F2C200;
+    --orange: #F5921E;
+    --red: #E5402F;
+    --track: #E6EBF2;
+    --shadow: 0 6px 24px rgba(16, 40, 78, 0.08);
+    --shadow-sm: 0 2px 10px rgba(16, 40, 78, 0.06);
   }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
   body {
-    font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
-    background: var(--paper);
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+    background: #C9D3DE;
     color: var(--ink);
     -webkit-font-smoothing: antialiased;
-    font-size: 15px;
-    line-height: 1.5;
-    min-height: 100vh;
-  }
-  .serif {
-    font-family: ui-serif, "New York", "Iowan Old Style", Georgia, serif;
-    font-feature-settings: "kern" 1, "liga" 1, "onum" 1;
-  }
-
-  /* Top bar */
-  .topbar {
-    padding: 14px 0;
-    border-bottom: 1px solid var(--rule);
-    background: var(--paper);
-  }
-  .topbar .wrap {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 0 32px;
     display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 24px;
-  }
-  .brand {
-    font-family: ui-serif, "New York", Georgia, serif;
-    font-size: 18px;
-    font-weight: 600;
-    letter-spacing: -0.01em;
-    color: var(--ink);
-    text-decoration: none;
-  }
-  .brand-mark {
-    display: inline-block;
-    width: 7px; height: 7px;
-    background: var(--teal);
-    margin-right: 8px;
-    transform: translateY(-1px);
-  }
-  .nav-links {
-    display: flex;
-    gap: 24px;
-    align-items: baseline;
-    font-size: 13px;
-  }
-  .nav-links a {
-    color: var(--ink-2);
-    text-decoration: none;
-    border-bottom: 1px solid transparent;
-    padding-bottom: 2px;
-  }
-  .nav-links a:hover { border-bottom-color: var(--ink); }
-  .live-tag {
-    display: inline-flex;
     align-items: center;
-    gap: 6px;
-    padding: 2px 8px;
-    background: var(--paper-2);
-    border: 1px solid var(--rule-soft);
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: var(--ink-2);
-    font-weight: 600;
-  }
-  .live-tag::before {
-    content: "";
-    width: 6px; height: 6px;
-    border-radius: 50%;
-    background: var(--teal);
-    animation: pulse 2.2s infinite;
-  }
-  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
-
-  /* Layout */
-  .container {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 32px;
-  }
-
-  /* Subject strip */
-  .subject {
-    border-bottom: 1px solid var(--rule);
-    padding-bottom: 24px;
-    margin-bottom: 32px;
-    display: flex;
-    align-items: flex-end;
-    justify-content: space-between;
-    flex-wrap: wrap;
-    gap: 16px;
-  }
-  .subject-info .kicker {
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    color: var(--ink-3);
-    margin-bottom: 6px;
-  }
-  .subject-info h1 {
-    font-family: ui-serif, "New York", Georgia, serif;
-    font-size: 28px;
-    font-weight: 600;
-    letter-spacing: -0.01em;
-  }
-  .subject-info .meta {
-    margin-top: 4px;
-    font-size: 13px;
-    color: var(--ink-2);
-  }
-  .subject .clock {
-    font-variant-numeric: tabular-nums;
-    color: var(--ink-3);
-    font-size: 13px;
-  }
-
-  /* Grid */
-  .grid {
-    display: grid;
-    grid-template-columns: 1.1fr 1fr;
-    gap: 32px;
-  }
-  @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
-
-  .col-stack {
-    display: flex;
-    flex-direction: column;
-    gap: 24px;
-  }
-
-  /* Panels */
-  .panel {
-    background: var(--paper);
-    border: 1px solid var(--rule-soft);
+    justify-content: center;
+    min-height: 100vh;
     padding: 24px;
   }
-  .panel h2 {
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    color: var(--ink-3);
-    font-weight: 700;
-    margin-bottom: 20px;
-    padding-bottom: 12px;
-    border-bottom: 1px solid var(--rule-soft);
+
+  /* Phone frame (desktop) */
+  .phone {
+    width: 400px;
+    height: 840px;
+    background: #0B0E12;
+    border-radius: 52px;
+    padding: 12px;
+    box-shadow: 0 30px 80px rgba(0,0,0,0.4), inset 0 0 2px rgba(255,255,255,0.2);
+    position: relative;
+  }
+  .phone .notch {
+    position: absolute;
+    top: 22px; left: 50%;
+    transform: translateX(-50%);
+    width: 120px; height: 32px;
+    background: #0B0E12;
+    border-radius: 20px;
+    z-index: 30;
+  }
+  .screen {
+    width: 100%; height: 100%;
+    background: var(--bg);
+    border-radius: 42px;
+    overflow: hidden;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+  }
+  @media (max-width: 480px) {
+    body { padding: 0; background: var(--bg); }
+    .phone { width: 100vw; height: 100vh; border-radius: 0; padding: 0; box-shadow: none; }
+    .phone .notch { display: none; }
+    .screen { border-radius: 0; }
   }
 
-  /* Index panel */
-  .index-panel {
-    text-align: center;
-    padding: 36px 24px 32px;
+  /* Status bar */
+  .statusbar {
+    height: 52px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 28px 0 32px;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--ink);
+    padding-top: 8px;
   }
-  .gauge {
+  .statusbar .icons { display: flex; align-items: center; gap: 6px; }
+  .statusbar svg { display: block; }
+
+  /* App bar */
+  .appbar {
+    flex-shrink: 0;
+    height: 52px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+  }
+  .appbar .icon-btn {
+    width: 40px; height: 40px;
+    display: flex; align-items: center; justify-content: center;
+    background: none; border: none; cursor: pointer;
+    color: var(--ink-2);
     position: relative;
-    width: 260px;
-    height: 260px;
-    margin: 0 auto 12px;
   }
-  .gauge svg { width: 100%; height: 100%; transform: rotate(-90deg); }
-  .gauge-bg { stroke: var(--rule-soft); }
-  .gauge-fill {
-    stroke: var(--teal);
-    stroke-linecap: butt;
-    transition: stroke-dashoffset 1.2s cubic-bezier(0.4, 0, 0.2, 1), stroke 0.6s;
+  .appbar .logo {
+    font-size: 19px;
+    font-weight: 800;
+    color: var(--blue);
+    letter-spacing: -0.01em;
   }
-  .gauge-center {
+  .appbar .bell-dot {
+    position: absolute;
+    top: 8px; right: 9px;
+    width: 8px; height: 8px;
+    background: var(--blue);
+    border-radius: 50%;
+    border: 2px solid var(--bg);
+  }
+
+  /* Scroll area */
+  .content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px 20px 24px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .content::-webkit-scrollbar { display: none; }
+
+  /* Screens */
+  .view { display: none; }
+  .view.active { display: block; animation: fade 0.25s ease; }
+  @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+
+  /* Greeting */
+  .greeting {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 8px 0 20px;
+  }
+  .greeting h1 {
+    font-size: 25px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+  }
+  .greeting .sub {
+    font-size: 14px;
+    color: var(--ink-2);
+    margin-top: 2px;
+  }
+  .avatar {
+    width: 46px; height: 46px;
+    border-radius: 50%;
+    background: #CDD6E0 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='46' height='46' viewBox='0 0 46 46'%3E%3Ccircle cx='23' cy='18' r='8' fill='%239AA7B6'/%3E%3Cpath d='M9 42c0-8 6-13 14-13s14 5 14 13' fill='%239AA7B6'/%3E%3C/svg%3E") center/cover;
+    flex-shrink: 0;
+  }
+
+  /* Card base */
+  .card {
+    background: var(--white);
+    border-radius: 20px;
+    padding: 20px;
+    margin-bottom: 16px;
+    box-shadow: var(--shadow-sm);
+  }
+  .card-head {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 16px;
+  }
+  .card-head-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 18px;
+  }
+  .card-head-row .title { font-size: 15px; font-weight: 700; }
+  .card-head-row a { font-size: 13px; color: var(--blue); text-decoration: none; font-weight: 600; cursor: pointer; }
+
+  /* Estado de hidratación (navy) */
+  .estado {
+    background: linear-gradient(160deg, var(--navy-2), var(--navy));
+    color: var(--white);
+    border-radius: 22px;
+    padding: 18px 20px 22px;
+    margin-bottom: 16px;
+    box-shadow: var(--shadow);
+  }
+  .estado .card-head { color: rgba(255,255,255,0.85); }
+  .estado .card-head .info { color: rgba(255,255,255,0.5); }
+  .estado-body {
+    display: grid;
+    grid-template-columns: 1fr 118px;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .drop-wrap {
+    position: relative;
+    width: 150px;
+    height: 168px;
+    margin: 0 auto;
+  }
+  .drop-wrap svg { width: 100%; height: 100%; }
+  .drop-text {
     position: absolute;
     inset: 0;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
+    text-align: center;
+    padding-top: 14px;
   }
-  .gauge-value {
-    font-family: ui-serif, "New York", Georgia, serif;
-    font-size: 88px;
-    font-weight: 500;
-    line-height: 1;
-    letter-spacing: -0.04em;
-    font-variant-numeric: tabular-nums;
-    transition: color 0.6s;
+  .drop-text .state {
+    font-size: 26px;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    transition: color 0.5s;
   }
-  .gauge-label {
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    color: var(--ink-3);
-    margin-top: 6px;
-  }
-  .status-msg {
-    font-family: ui-serif, Georgia, serif;
-    font-size: 19px;
-    font-weight: 600;
-    margin-top: 12px;
-    transition: color 0.6s;
-  }
-  .status-sub {
-    font-size: 13px;
-    color: var(--ink-2);
+  .drop-text .state-sub {
+    font-size: 11.5px;
+    color: rgba(255,255,255,0.78);
     margin-top: 4px;
-    max-width: 320px;
-    margin-left: auto;
-    margin-right: auto;
+  }
+  .drop-text .state-time {
+    font-size: 9.5px;
+    color: rgba(255,255,255,0.45);
+    margin-top: 8px;
+    line-height: 1.3;
+    max-width: 96px;
   }
 
-  /* Devices */
-  .device-row {
+  /* Legend scale */
+  .legend { display: flex; flex-direction: column; gap: 13px; }
+  .legend-item {
     display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    padding: 14px 0;
-    border-bottom: 1px solid var(--rule-soft);
-  }
-  .device-row:first-child { padding-top: 0; }
-  .device-row:last-child { border: none; padding-bottom: 0; }
-  .device-row .name {
-    font-weight: 600;
-    font-size: 14px;
-  }
-  .device-row .sub {
-    font-size: 12px;
-    color: var(--ink-3);
-    margin-top: 2px;
-  }
-  .conn {
-    display: inline-flex;
     align-items: center;
-    gap: 6px;
-    font-size: 12px;
-    color: var(--teal-deep);
-    font-weight: 600;
+    gap: 9px;
+    font-size: 12.5px;
+    color: rgba(255,255,255,0.7);
+    position: relative;
   }
-  .conn .dot {
-    width: 7px; height: 7px;
+  .legend-item .dot {
+    width: 11px; height: 11px;
     border-radius: 50%;
-    background: var(--teal);
-    box-shadow: 0 0 6px rgba(29, 110, 91, 0.5);
+    flex-shrink: 0;
+  }
+  .legend-item.current {
+    color: var(--white);
+    font-weight: 700;
+  }
+  .legend-item.current .dot {
+    background: var(--white) !important;
+    box-shadow: 0 0 0 3px rgba(255,255,255,0.25);
+  }
+  .legend-item.current::before {
+    content: "";
+    position: absolute;
+    left: -18px;
+    width: 12px; height: 2px;
+    background: rgba(255,255,255,0.6);
   }
 
-  /* Readings */
-  .readings {
+  /* Progreso ring */
+  .progreso-body {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    border-top: 1px solid var(--rule-soft);
+    grid-template-columns: 130px 1fr;
+    gap: 16px;
+    align-items: center;
   }
-  .reading {
-    padding: 16px 18px;
-    border-right: 1px solid var(--rule-soft);
-    border-bottom: 1px solid var(--rule-soft);
+  .ring-wrap {
+    position: relative;
+    width: 130px; height: 130px;
   }
-  .reading:nth-child(2n) { border-right: none; }
-  .reading:nth-last-child(-n+2) { border-bottom: none; }
-  .reading .label {
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: var(--ink-3);
-    font-weight: 600;
-    margin-bottom: 4px;
+  .ring-wrap svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+  .ring-bg { stroke: var(--track); }
+  .ring-fill { stroke: var(--blue); stroke-linecap: round; transition: stroke-dashoffset 1s ease; }
+  .ring-center {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
   }
-  .reading .value {
-    font-family: ui-serif, Georgia, serif;
-    font-size: 24px;
-    font-weight: 600;
-    line-height: 1.1;
-    font-variant-numeric: tabular-nums;
+  .ring-center .liters {
+    font-size: 26px; font-weight: 800; letter-spacing: -0.02em;
+    line-height: 1;
   }
-  .reading .unit {
-    font-family: ui-sans-serif, sans-serif;
-    font-size: 13px;
-    color: var(--ink-3);
-    margin-left: 4px;
-    font-weight: 400;
-  }
-  .reading .range {
-    margin-top: 4px;
-    font-size: 11px;
-    color: var(--ink-3);
-  }
+  .ring-center .of { font-size: 12px; color: var(--ink-3); margin-top: 3px; }
+  .ring-pct { font-size: 12px; color: var(--blue); font-weight: 700; text-align: center; margin-top: 8px; }
 
-  /* Trend */
-  .trend-panel { grid-column: 1 / -1; }
-  .legend {
-    display: flex;
-    gap: 20px;
-    margin-bottom: 12px;
-    font-size: 12px;
-    color: var(--ink-2);
+  .progreso-stats { display: flex; flex-direction: column; gap: 14px; }
+  .stat-item { display: flex; align-items: center; gap: 12px; }
+  .stat-item .ic {
+    width: 38px; height: 38px;
+    border-radius: 11px;
+    background: var(--blue-soft);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--blue);
+    flex-shrink: 0;
   }
-  .legend span { display: inline-flex; align-items: center; gap: 6px; }
-  .legend .swatch { width: 12px; height: 2px; }
-  .trend-chart {
-    width: 100%;
-    height: 200px;
-    display: block;
-    background: #fff;
-    border: 1px solid var(--rule-soft);
-  }
-  .trend-axis {
-    display: flex;
-    justify-content: space-between;
-    margin-top: 6px;
-    font-size: 11px;
-    color: var(--ink-3);
-  }
+  .stat-item .lbl { font-size: 12px; color: var(--ink-2); }
+  .stat-item .num { font-size: 15px; font-weight: 700; margin-top: 1px; }
 
-  /* Scenario */
-  .scenarios {
+  /* Recomendaciones */
+  .reco {
     display: flex;
-    margin-top: 24px;
-    border-top: 1px solid var(--rule-soft);
-    padding-top: 20px;
-  }
-  .scenarios .label {
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: var(--ink-3);
-    font-weight: 600;
-    margin-right: 16px;
-    align-self: center;
-  }
-  .scenarios .opts {
-    display: flex;
-    gap: 0;
-    border: 1px solid var(--ink);
-  }
-  .scenario-btn {
-    padding: 8px 16px;
-    background: var(--paper);
-    border: none;
-    border-right: 1px solid var(--ink);
-    color: var(--ink-2);
-    font-size: 13px;
-    font-weight: 500;
+    align-items: center;
+    gap: 14px;
     cursor: pointer;
-    font-family: inherit;
-    transition: background 0.15s, color 0.15s;
   }
-  .scenario-btn:last-child { border-right: none; }
-  .scenario-btn:hover { background: var(--paper-2); }
-  .scenario-btn.active {
-    background: var(--ink);
-    color: var(--paper);
+  .reco .ic {
+    width: 42px; height: 42px;
+    border-radius: 12px;
+    background: var(--blue-soft);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--blue);
+    flex-shrink: 0;
   }
-  .scenarios .note {
-    margin-left: auto;
-    font-size: 12px;
+  .reco .txt { flex: 1; }
+  .reco .txt .title { font-size: 13px; font-weight: 700; margin-bottom: 2px; }
+  .reco .txt p { font-size: 12.5px; color: var(--ink-2); line-height: 1.4; }
+  .reco .chev { color: var(--ink-3); flex-shrink: 0; }
+
+  /* Floating action */
+  .fab {
+    position: absolute;
+    right: 20px;
+    bottom: 88px;
+    width: 56px; height: 56px;
+    border-radius: 50%;
+    background: var(--blue);
+    color: white;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 8px 24px rgba(46, 95, 208, 0.4);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 20;
+    transition: transform 0.15s;
+  }
+  .fab:active { transform: scale(0.92); }
+
+  /* Tab bar */
+  .tabbar {
+    flex-shrink: 0;
+    height: 76px;
+    background: var(--white);
+    border-top: 1px solid var(--line);
+    display: flex;
+    padding-bottom: 14px;
+  }
+  .tab {
+    flex: 1;
+    background: none; border: none; cursor: pointer;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 4px;
     color: var(--ink-3);
-    font-style: italic;
-    align-self: center;
+    font-size: 10.5px;
+    font-weight: 600;
+    padding-top: 10px;
+    transition: color 0.15s;
+  }
+  .tab.active { color: var(--blue); }
+
+  /* Section header in sub-screens */
+  .screen-title {
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    margin: 8px 0 18px;
   }
 
-  /* State colors */
-  .state-good .gauge-fill { stroke: var(--teal); }
-  .state-good .gauge-value { color: var(--ink); }
-  .state-good .status-msg { color: var(--teal-deep); }
-  .state-warn .gauge-fill { stroke: var(--signal); }
-  .state-warn .gauge-value { color: var(--signal); }
-  .state-warn .status-msg { color: var(--signal); }
-  .state-critical .gauge-fill { stroke: var(--alarm); }
-  .state-critical .gauge-value { color: var(--alarm); }
-  .state-critical .status-msg { color: var(--alarm); }
+  /* Histórico */
+  .hist-chart {
+    width: 100%;
+    height: 180px;
+    display: block;
+  }
+  .hist-bars {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 8px;
+    align-items: end;
+    height: 150px;
+    margin-top: 4px;
+  }
+  .hbar { display: flex; flex-direction: column; align-items: center; height: 100%; justify-content: flex-end; gap: 8px; }
+  .hbar .b { width: 70%; border-radius: 8px 8px 4px 4px; background: var(--blue); min-height: 8px; transition: height 0.6s; }
+  .hbar.warn .b { background: var(--orange); }
+  .hbar.crit .b { background: var(--red); }
+  .hbar .d { font-size: 11px; color: var(--ink-3); }
+  .hist-stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .hist-stat { background: var(--white); border-radius: 16px; padding: 16px; box-shadow: var(--shadow-sm); }
+  .hist-stat .k { font-size: 12px; color: var(--ink-2); }
+  .hist-stat .v { font-size: 22px; font-weight: 800; margin-top: 4px; letter-spacing: -0.01em; }
+  .hist-stat .v small { font-size: 13px; color: var(--ink-3); font-weight: 600; }
+
+  /* Recordatorios */
+  .reminder {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 16px 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .reminder:last-child { border: none; }
+  .reminder .time { font-size: 18px; font-weight: 800; width: 64px; letter-spacing: -0.01em; }
+  .reminder .info { flex: 1; }
+  .reminder .info .t { font-size: 14px; font-weight: 600; }
+  .reminder .info .s { font-size: 12px; color: var(--ink-3); margin-top: 1px; }
+  .switch { width: 46px; height: 28px; border-radius: 999px; background: var(--track); position: relative; cursor: pointer; transition: background 0.2s; flex-shrink: 0; }
+  .switch.on { background: var(--blue); }
+  .switch .knob { position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: white; box-shadow: 0 1px 3px rgba(0,0,0,0.2); transition: transform 0.2s; }
+  .switch.on .knob { transform: translateX(18px); }
+
+  /* Perfil */
+  .profile-head { display: flex; align-items: center; gap: 16px; margin-bottom: 24px; }
+  .profile-head .av {
+    width: 64px; height: 64px; border-radius: 50%;
+    background: #CDD6E0 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='25' r='11' fill='%239AA7B6'/%3E%3Cpath d='M12 58c0-11 9-18 20-18s20 7 20 18' fill='%239AA7B6'/%3E%3C/svg%3E") center/cover;
+  }
+  .profile-head .n { font-size: 20px; font-weight: 800; }
+  .profile-head .e { font-size: 13px; color: var(--ink-2); margin-top: 2px; }
+  .prow {
+    display: flex; align-items: center; gap: 14px;
+    padding: 15px 0; border-bottom: 1px solid var(--line);
+  }
+  .prow:last-child { border: none; }
+  .prow .ic { width: 36px; height: 36px; border-radius: 10px; background: var(--blue-soft); color: var(--blue); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .prow .l { flex: 1; font-size: 14px; font-weight: 600; }
+  .prow .r { font-size: 13px; color: var(--ink-3); display: flex; align-items: center; gap: 8px; }
+  .conn-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); box-shadow: 0 0 6px rgba(47,180,87,0.5); }
+
+  /* Demo segment */
+  .seg { display: flex; border: 1px solid var(--blue); border-radius: 10px; overflow: hidden; margin-top: 10px; }
+  .seg button { flex: 1; padding: 8px; background: var(--white); border: none; border-right: 1px solid var(--blue); color: var(--blue); font-size: 12px; font-weight: 600; cursor: pointer; font-family: inherit; }
+  .seg button:last-child { border-right: none; }
+  .seg button.active { background: var(--blue); color: white; }
+
+  .demo-card { background: var(--white); border-radius: 16px; padding: 16px; box-shadow: var(--shadow-sm); }
+  .demo-card .dk { font-size: 12px; color: var(--ink-2); font-weight: 600; }
+
+  /* Toast */
+  .toast {
+    position: absolute;
+    bottom: 96px; left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: var(--ink);
+    color: white;
+    padding: 12px 22px;
+    border-radius: 999px;
+    font-size: 14px;
+    font-weight: 600;
+    opacity: 0;
+    transition: all 0.35s;
+    z-index: 40;
+    white-space: nowrap;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
 </style>
 </head>
 <body>
 
-<header class="topbar">
-  <div class="wrap">
-    <a href="../" class="brand"><span class="brand-mark"></span>AquaAlert</a>
-    <div class="nav-links">
-      <span class="live-tag">Live demo</span>
-      <a href="dashboard.html">Dashboard</a>
-      <a href="../">Project page</a>
-    </div>
-  </div>
-</header>
+<div class="phone">
+  <div class="notch"></div>
+  <div class="screen">
 
-<div class="container">
-
-  <div class="subject">
-    <div class="subject-info">
-      <div class="kicker">Active patient · Plan Calor enrolled</div>
-      <h1 class="serif">Antonio Martínez</h1>
-      <div class="meta">72 years · Barcelona · Patient #A-2026-0142</div>
-    </div>
-    <div class="clock" id="clock">Last update —</div>
-  </div>
-
-  <div class="grid">
-
-    <div class="panel index-panel" id="state-panel">
-      <h2 style="border: none; padding: 0; margin-bottom: 16px;">Hydration index</h2>
-      <div class="gauge">
-        <svg viewBox="0 0 200 200">
-          <circle class="gauge-bg" cx="100" cy="100" r="86" fill="none" stroke-width="10"/>
-          <circle class="gauge-fill" id="gauge-fill" cx="100" cy="100" r="86" fill="none" stroke-width="10"
-                  stroke-dasharray="540.35" stroke-dashoffset="540.35"/>
-        </svg>
-        <div class="gauge-center">
-          <div class="gauge-value" id="gauge-value">—</div>
-          <div class="gauge-label">out of 100</div>
-        </div>
-      </div>
-      <div class="status-msg" id="status-msg">Initializing</div>
-      <div class="status-sub" id="status-sub">Connecting to devices…</div>
+    <!-- Status bar -->
+    <div class="statusbar">
+      <span id="clock">9:41</span>
+      <span class="icons">
+        <svg width="18" height="12" viewBox="0 0 18 12"><rect x="0" y="7" width="3" height="5" rx="1" fill="#16202E"/><rect x="5" y="4" width="3" height="8" rx="1" fill="#16202E"/><rect x="10" y="2" width="3" height="10" rx="1" fill="#16202E"/><rect x="15" y="0" width="3" height="12" rx="1" fill="#16202E"/></svg>
+        <svg width="17" height="12" viewBox="0 0 17 12"><path d="M8.5 2.5c2.3 0 4.4.9 6 2.4l1.2-1.3C13.8 1.7 11.2.6 8.5.6S3.2 1.7 1.3 3.6l1.2 1.3c1.6-1.5 3.7-2.4 6-2.4z" fill="#16202E"/><path d="M8.5 6c1.3 0 2.5.5 3.4 1.4l1.2-1.3C11.9 4.9 10.3 4.2 8.5 4.2S5.1 4.9 3.9 6.1l1.2 1.3C6 6.5 7.2 6 8.5 6z" fill="#16202E"/><circle cx="8.5" cy="9.8" r="1.6" fill="#16202E"/></svg>
+        <svg width="26" height="13" viewBox="0 0 26 13"><rect x="0.5" y="0.5" width="22" height="12" rx="3" fill="none" stroke="#16202E" stroke-opacity="0.4"/><rect x="2" y="2" width="18" height="9" rx="1.5" fill="#16202E"/><rect x="23.5" y="4" width="2" height="5" rx="1" fill="#16202E" fill-opacity="0.4"/></svg>
+      </span>
     </div>
 
-    <div class="col-stack">
-      <div class="panel">
-        <h2>Devices</h2>
-        <div class="device-row">
+    <!-- App bar -->
+    <div class="appbar">
+      <button class="icon-btn" aria-label="Menú">
+        <svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h16M3 11h16M3 16h16"/></svg>
+      </button>
+      <span class="logo">AquaAlert</span>
+      <button class="icon-btn" aria-label="Notificaciones">
+        <svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 3a5 5 0 0 0-5 5c0 4-2 5-2 5h14s-2-1-2-5a5 5 0 0 0-5-5z"/><path d="M9.5 18a1.8 1.8 0 0 0 3 0"/></svg>
+        <span class="bell-dot"></span>
+      </button>
+    </div>
+
+    <div class="content">
+
+      <!-- ============ INICIO ============ -->
+      <div class="view active" id="view-inicio">
+        <div class="greeting">
           <div>
-            <div class="name">AquaAlert Bottle</div>
-            <div class="sub">BLE hub · Battery 78% · RSSI −52 dBm</div>
+            <h1 id="greet-name">¡Hola, Laura!</h1>
+            <div class="sub">Así está tu hidratación hoy</div>
           </div>
-          <span class="conn"><span class="dot"></span>Connected</span>
+          <div class="avatar"></div>
         </div>
-        <div class="device-row">
-          <div>
-            <div class="name">AquaAlert Leg Mesh</div>
-            <div class="sub">via bottle hub · Battery 91%</div>
+
+        <!-- Estado -->
+        <div class="estado">
+          <div class="card-head">
+            Estado de hidratación
+            <svg class="info" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="7" cy="7" r="6"/><path d="M7 6.2v3.2M7 4.2v.1" stroke-linecap="round"/></svg>
           </div>
-          <span class="conn"><span class="dot"></span>Connected</span>
+          <div class="estado-body">
+            <div class="drop-wrap">
+              <svg viewBox="0 0 150 168">
+                <defs>
+                  <linearGradient id="dropGrad" x1="0.5" y1="0" x2="0.5" y2="1">
+                    <stop offset="0%" stop-color="#2FB457"/>
+                    <stop offset="38%" stop-color="#F2C200"/>
+                    <stop offset="68%" stop-color="#F5921E"/>
+                    <stop offset="100%" stop-color="#E5402F"/>
+                  </linearGradient>
+                </defs>
+                <path id="dropPath" d="M75 14 C75 14 128 78 128 110 A53 53 0 1 1 22 110 C22 78 75 14 75 14 Z"
+                      fill="none" stroke="url(#dropGrad)" stroke-width="6" stroke-linecap="round"/>
+                <circle id="dropMarker" cx="22" cy="100" r="6" fill="#fff" stroke="#0E2A4E" stroke-width="2"/>
+              </svg>
+              <div class="drop-text">
+                <div class="state" id="drop-state" style="color: var(--green);">Bueno</div>
+                <div class="state-sub" id="drop-sub">Estás bien hidratado</div>
+                <div class="state-time" id="drop-time">Última actualización hace 15 min</div>
+              </div>
+            </div>
+            <div class="legend" id="legend">
+              <div class="legend-item" data-level="optimo"><span class="dot" style="background: var(--green);"></span>Óptimo</div>
+              <div class="legend-item current" data-level="bueno"><span class="dot" style="background: var(--green);"></span>Bueno</div>
+              <div class="legend-item" data-level="moderado"><span class="dot" style="background: var(--yellow);"></span>Moderado</div>
+              <div class="legend-item" data-level="bajo"><span class="dot" style="background: var(--orange);"></span>Bajo</div>
+              <div class="legend-item" data-level="deshidratado"><span class="dot" style="background: var(--red);"></span>Deshidratado</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Progreso -->
+        <div class="card">
+          <div class="card-head-row">
+            <span class="title">Tu progreso</span>
+            <a data-goto="historico">Ver histórico</a>
+          </div>
+          <div class="progreso-body">
+            <div>
+              <div class="ring-wrap">
+                <svg viewBox="0 0 120 120">
+                  <circle class="ring-bg" cx="60" cy="60" r="52" fill="none" stroke-width="11"/>
+                  <circle class="ring-fill" id="ring-fill" cx="60" cy="60" r="52" fill="none" stroke-width="11"
+                          stroke-dasharray="326.7" stroke-dashoffset="117.6"/>
+                </svg>
+                <div class="ring-center">
+                  <div class="liters"><span id="liters-now">1.6</span> L</div>
+                  <div class="of">de <span id="liters-goal">2.5</span> L</div>
+                </div>
+              </div>
+              <div class="ring-pct"><span id="pct">64</span>% tu objetivo</div>
+            </div>
+            <div class="progreso-stats">
+              <div class="stat-item">
+                <span class="ic">
+                  <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M5 2h8v3H5zM4 5h10l-1 11H5z" stroke-linejoin="round"/></svg>
+                </span>
+                <div><div class="lbl">Ingerido hoy</div><div class="num"><span id="stat-now">1.6</span> litros</div></div>
+              </div>
+              <div class="stat-item">
+                <span class="ic">
+                  <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="9" cy="9" r="7"/><circle cx="9" cy="9" r="3.5"/><circle cx="9" cy="9" r="0.6" fill="currentColor"/></svg>
+                </span>
+                <div><div class="lbl">Objetivo diario</div><div class="num">2.5 litros</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Recomendaciones -->
+        <div class="card reco" id="reco-card">
+          <span class="ic">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor"><path d="M10 2s6 6.5 6 10.5A6 6 0 1 1 4 12.5C4 8.5 10 2 10 2z"/></svg>
+          </span>
+          <div class="txt">
+            <div class="title">Recomendaciones para ti</div>
+            <p id="reco-text">Hace calor hoy. Aumenta tu ingesta de agua a lo largo del día.</p>
+          </div>
+          <span class="chev">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4l5 5-5 5"/></svg>
+          </span>
         </div>
       </div>
 
-      <div class="panel" style="padding: 0;">
-        <h2 style="padding: 24px 24px 0; margin-bottom: 16px; border: none;">Live readings</h2>
-        <div class="readings">
-          <div class="reading">
-            <div class="label">Saliva conductance</div>
-            <div class="value"><span id="r-saliva">—</span><span class="unit">µS</span></div>
-            <div class="range">Normal range 750 – 2000</div>
+      <!-- ============ HISTÓRICO ============ -->
+      <div class="view" id="view-historico">
+        <div class="screen-title">Histórico</div>
+        <div class="card">
+          <div class="card-head-row"><span class="title">Índice de hidratación · 7 días</span></div>
+          <div class="hist-bars" id="hist-bars"></div>
+        </div>
+        <div class="hist-stat-grid">
+          <div class="hist-stat"><div class="k">Media semanal</div><div class="v">74<small> /100</small></div></div>
+          <div class="hist-stat"><div class="k">Agua media/día</div><div class="v">1.9<small> L</small></div></div>
+          <div class="hist-stat"><div class="k">Mejor día</div><div class="v">Lun<small> · 82</small></div></div>
+          <div class="hist-stat"><div class="k">Días en objetivo</div><div class="v">5<small> /7</small></div></div>
+        </div>
+        <div class="card" style="margin-top:16px;">
+          <div class="card-head-row"><span class="title">Tendencia 24 h</span></div>
+          <canvas class="hist-chart" id="hist-chart"></canvas>
+        </div>
+      </div>
+
+      <!-- ============ RECORDATORIOS ============ -->
+      <div class="view" id="view-recordatorios">
+        <div class="screen-title">Recordatorios</div>
+        <div class="card">
+          <div class="reminder">
+            <div class="time">09:00</div>
+            <div class="info"><div class="t">Vaso de la mañana</div><div class="s">Al despertar · 250 ml</div></div>
+            <div class="switch on" data-switch><div class="knob"></div></div>
           </div>
-          <div class="reading">
-            <div class="label">Ankle BIA</div>
-            <div class="value"><span id="r-bia">—</span><span class="unit">Ω</span></div>
-            <div class="range">Normal range 200 – 400</div>
+          <div class="reminder">
+            <div class="time">12:30</div>
+            <div class="info"><div class="t">Antes de comer</div><div class="s">Mediodía · 300 ml</div></div>
+            <div class="switch on" data-switch><div class="knob"></div></div>
           </div>
-          <div class="reading">
-            <div class="label">Liquid temperature</div>
-            <div class="value"><span id="r-tliq">—</span><span class="unit">°C</span></div>
-            <div class="range">Bottle interior</div>
+          <div class="reminder">
+            <div class="time">17:00</div>
+            <div class="info"><div class="t">Tarde de calor</div><div class="s">Solo en alerta de calor</div></div>
+            <div class="switch on" data-switch><div class="knob"></div></div>
           </div>
-          <div class="reading">
-            <div class="label">Ambient temperature</div>
-            <div class="value"><span id="r-tamb">—</span><span class="unit">°C</span></div>
-            <div class="range">Bottle exterior</div>
+          <div class="reminder">
+            <div class="time">21:00</div>
+            <div class="info"><div class="t">Última toma</div><div class="s">Noche · 200 ml</div></div>
+            <div class="switch" data-switch><div class="knob"></div></div>
+          </div>
+        </div>
+        <div class="card reco">
+          <span class="ic">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3a5 5 0 0 0-5 5c0 4-2 5-2 5h14s-2-1-2-5a5 5 0 0 0-5-5z"/><path d="M8.5 16a1.8 1.8 0 0 0 3 0"/></svg>
+          </span>
+          <div class="txt"><div class="title">Avisar al cuidador</div><p>Carmen recibe una alerta si no bebes durante 4 horas.</p></div>
+        </div>
+      </div>
+
+      <!-- ============ PERFIL ============ -->
+      <div class="view" id="view-perfil">
+        <div class="screen-title">Perfil</div>
+        <div class="profile-head">
+          <div class="av"></div>
+          <div><div class="n">Laura Giménez</div><div class="e">laura.gimenez@email.com</div></div>
+        </div>
+
+        <div class="card">
+          <div class="prow">
+            <span class="ic"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="5" y="2" width="8" height="14" rx="2"/><path d="M8 13h2" stroke-linecap="round"/></svg></span>
+            <span class="l">AquaAlert Bottle</span>
+            <span class="r"><span class="conn-dot"></span>Conectada</span>
+          </div>
+          <div class="prow">
+            <span class="ic"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 2v6l-2 8M12 2v6l2 8" stroke-linecap="round"/></svg></span>
+            <span class="l">AquaAlert Leg Mesh</span>
+            <span class="r"><span class="conn-dot"></span>Conectada</span>
+          </div>
+          <div class="prow">
+            <span class="ic"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="9" cy="6" r="3"/><path d="M3 16c0-3.5 2.7-6 6-6s6 2.5 6 6" stroke-linecap="round"/></svg></span>
+            <span class="l">Cuidador</span>
+            <span class="r">Carmen M.</span>
+          </div>
+          <div class="prow">
+            <span class="ic"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M9 2l2 2 3-.5.5 3 2 2-1.5 2.5L17 16l-3-.5L9 17l-2-2-3 .5L3.5 12 2 9.5 3.5 7 3 4l3 .5z" stroke-linejoin="round"/><circle cx="9" cy="9" r="2.5"/></svg></span>
+            <span class="l">Objetivo diario</span>
+            <span class="r">2.5 L</span>
+          </div>
+        </div>
+
+        <a href="dashboard.html" class="card prow" style="text-decoration:none; color:inherit;">
+          <span class="ic"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2" y="2" width="14" height="14" rx="2"/><path d="M6 11l2.5-3 2 2L14 6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+          <span class="l">Vista de cuidador</span>
+          <span class="r"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4l4 4-4 4"/></svg></span>
+        </a>
+
+        <div class="demo-card">
+          <div class="dk">Modo demostración · simular estado</div>
+          <div class="seg" id="demo-seg">
+            <button class="active" data-scenario="normal">Normal</button>
+            <button data-scenario="warning">Alerta calor</button>
+            <button data-scenario="critical">Crítico</button>
           </div>
         </div>
       </div>
+
     </div>
 
-    <div class="panel trend-panel">
-      <h2>Hydration index — last 24 hours</h2>
-      <div class="legend">
-        <span><span class="swatch" style="background: var(--teal);"></span>Healthy ≥ 60</span>
-        <span><span class="swatch" style="background: var(--signal);"></span>Warning 30–59</span>
-        <span><span class="swatch" style="background: var(--alarm);"></span>Critical &lt; 30</span>
-      </div>
-      <canvas class="trend-chart" id="trend"></canvas>
-      <div class="trend-axis" id="trend-axis"></div>
+    <!-- FAB (only on Inicio) -->
+    <button class="fab" id="fab" aria-label="Registrar agua">
+      <svg width="26" height="26" viewBox="0 0 26 26" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M13 6v14M6 13h14"/></svg>
+    </button>
 
-      <div class="scenarios">
-        <span class="label">Scenario</span>
-        <div class="opts">
-          <button class="scenario-btn active" data-scenario="normal">Normal day</button>
-          <button class="scenario-btn" data-scenario="warning">Heat warning</button>
-          <button class="scenario-btn" data-scenario="critical">Critical event</button>
-        </div>
-        <span class="note">Switch to see how the system responds</span>
-      </div>
-    </div>
+    <!-- Tab bar -->
+    <nav class="tabbar">
+      <button class="tab active" data-tab="inicio">
+        <svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M3 9l8-6 8 6v9a1 1 0 0 1-1 1h-4v-6H8v6H4a1 1 0 0 1-1-1z"/></svg>
+        Inicio
+      </button>
+      <button class="tab" data-tab="historico">
+        <svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 18V9M9 18V4M14 18v-6M19 18v-9"/></svg>
+        Histórico
+      </button>
+      <button class="tab" data-tab="recordatorios">
+        <svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 3a5 5 0 0 0-5 5c0 4-2 5-2 5h14s-2-1-2-5a5 5 0 0 0-5-5z"/><path d="M9.5 18a1.8 1.8 0 0 0 3 0"/></svg>
+        Recordatorios
+      </button>
+      <button class="tab" data-tab="perfil">
+        <svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="7" r="3.5"/><path d="M4 19c0-4 3-6.5 7-6.5s7 2.5 7 6.5"/></svg>
+        Perfil
+      </button>
+    </nav>
+
+    <div class="toast" id="toast">Registrado</div>
 
   </div>
 </div>
 
 <script>
+  // ---- State ----
   let scenario = 'normal';
-  const target = { normal: 78, warning: 48, critical: 22 };
-  let currentIndex = 78;
-  let displayIndex = 78;
+  const scenarios = {
+    normal:   { index: 78, state: 'Bueno',     level: 'bueno',      sub: 'Estás bien hidratado',          color: 'var(--green)',  reco: 'Hace calor hoy. Aumenta tu ingesta de agua a lo largo del día.' },
+    warning:  { index: 48, state: 'Moderado',  level: 'moderado',   sub: 'Tu hidratación está bajando',    color: 'var(--yellow)', reco: 'Alerta de calor activa. Bebe un vaso ahora y otro en 30 minutos.' },
+    critical: { index: 22, state: 'Bajo',      level: 'bajo',       sub: 'Necesitas beber agua ya',        color: 'var(--orange)', reco: 'Hidratación crítica. Hemos avisado a Carmen. Bebe agua de inmediato.' }
+  };
+  let litersNow = 1.6;
+  const litersGoal = 2.5;
 
-  const history = [];
-  function generateHistory(s) {
-    const baseline = target[s];
-    const arr = [];
-    for (let i = 0; i < 48; i++) {
-      const noise = (Math.random() - 0.5) * 12;
-      const drift = Math.sin(i * 0.3) * 6;
-      arr.push(Math.max(5, Math.min(95, baseline + noise + drift)));
-    }
-    return arr;
-  }
-  history.push(...generateHistory(scenario));
+  // Drop marker positions along the path for each level (approx % of path length)
+  const dropPath = document.getElementById('dropPath');
+  const dropMarker = document.getElementById('dropMarker');
+  const pathLen = dropPath.getTotalLength();
+  const levelPos = { optimo: 0.02, bueno: 0.10, moderado: 0.30, bajo: 0.55, deshidratado: 0.78 };
 
-  function updateClock() {
-    const now = new Date();
-    const t = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-    document.getElementById('clock').textContent = `Last update · ${t}`;
-  }
-  setInterval(updateClock, 1000); updateClock();
-
-  const CIRCUMFERENCE = 2 * Math.PI * 86;
-  function setGauge(value) {
-    document.getElementById('gauge-fill').style.strokeDashoffset = CIRCUMFERENCE * (1 - value / 100);
-    document.getElementById('gauge-value').textContent = Math.round(value);
+  function placeMarker(level) {
+    const p = dropPath.getPointAtLength(pathLen * (levelPos[level] ?? 0.10));
+    dropMarker.setAttribute('cx', p.x);
+    dropMarker.setAttribute('cy', p.y);
   }
 
-  function updateState(value) {
-    const panel = document.getElementById('state-panel');
-    panel.classList.remove('state-good', 'state-warn', 'state-critical');
-    let msg, sub;
-    if (value >= 60) {
-      panel.classList.add('state-good');
-      msg = 'Within target range';
-      sub = 'Hydration is well-balanced. No action required.';
-    } else if (value >= 30) {
-      panel.classList.add('state-warn');
-      msg = 'Mild dehydration detected';
-      sub = 'Body water trending down. A prompt has been sent to the patient.';
-    } else {
-      panel.classList.add('state-critical');
-      msg = 'Critical — caregiver notified';
-      sub = 'Severe deficit. Urgent intervention recommended.';
-    }
-    document.getElementById('status-msg').textContent = msg;
-    document.getElementById('status-sub').textContent = sub;
+  // ---- Apply scenario ----
+  function applyScenario() {
+    const s = scenarios[scenario];
+    document.getElementById('drop-state').textContent = s.state;
+    document.getElementById('drop-state').style.color = s.color;
+    document.getElementById('drop-sub').textContent = s.sub;
+    document.getElementById('reco-text').textContent = s.reco;
+    // legend current
+    document.querySelectorAll('.legend-item').forEach(li => {
+      li.classList.toggle('current', li.dataset.level === s.level);
+    });
+    placeMarker(s.level);
   }
 
-  function updateReadings(value) {
-    const saliva = Math.round(2400 - value * 18 + (Math.random() - 0.5) * 80);
-    const bia = Math.round(440 - value * 2.2 + (Math.random() - 0.5) * 10);
-    const tliq = (18 + Math.random() * 2).toFixed(1);
-    const tamb = scenario === 'normal' ? (24 + Math.random() * 2).toFixed(1)
-                : scenario === 'warning' ? (34 + Math.random() * 2).toFixed(1)
-                : (39 + Math.random() * 2).toFixed(1);
-    document.getElementById('r-saliva').textContent = saliva;
-    document.getElementById('r-bia').textContent = bia;
-    document.getElementById('r-tliq').textContent = tliq;
-    document.getElementById('r-tamb').textContent = tamb;
+  // ---- Progress ring ----
+  const RING_CIRC = 2 * Math.PI * 52;
+  function updateRing() {
+    const pct = Math.min(100, Math.round((litersNow / litersGoal) * 100));
+    document.getElementById('ring-fill').style.strokeDashoffset = RING_CIRC * (1 - pct / 100);
+    document.getElementById('liters-now').textContent = litersNow.toFixed(1);
+    document.getElementById('stat-now').textContent = litersNow.toFixed(1);
+    document.getElementById('pct').textContent = pct;
   }
 
-  const canvas = document.getElementById('trend');
-  const ctx = canvas.getContext('2d');
-  function resize() {
+  // ---- Tabs ----
+  const fab = document.getElementById('fab');
+  function showTab(tab) {
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.getElementById('view-' + tab).classList.add('active');
+    document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+    fab.style.display = tab === 'inicio' ? 'flex' : 'none';
+    document.querySelector('.content').scrollTop = 0;
+    if (tab === 'historico') drawHistChart();
+  }
+  document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => showTab(t.dataset.tab)));
+  document.querySelectorAll('[data-goto]').forEach(el => el.addEventListener('click', () => showTab(el.dataset.goto)));
+
+  // ---- FAB: log water ----
+  const toast = document.getElementById('toast');
+  function showToast(msg) {
+    toast.textContent = msg;
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 1800);
+  }
+  fab.addEventListener('click', () => {
+    litersNow = Math.min(litersGoal, Math.round((litersNow + 0.25) * 100) / 100);
+    updateRing();
+    showToast('+250 ml registrado');
+  });
+
+  // ---- Switches ----
+  document.querySelectorAll('[data-switch]').forEach(sw => {
+    sw.addEventListener('click', () => sw.classList.toggle('on'));
+  });
+
+  // ---- Demo segment ----
+  document.querySelectorAll('#demo-seg button').forEach(b => {
+    b.addEventListener('click', () => {
+      document.querySelectorAll('#demo-seg button').forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+      scenario = b.dataset.scenario;
+      applyScenario();
+    });
+  });
+
+  // ---- Histórico bars ----
+  const week = [82, 76, 71, 68, 79, 73, 78];
+  function renderHistBars() {
+    const wrap = document.getElementById('hist-bars');
+    wrap.innerHTML = '';
+    const days = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
+    week.forEach((v, i) => {
+      const cls = v >= 60 ? '' : v >= 30 ? 'warn' : 'crit';
+      const d = document.createElement('div');
+      d.className = 'hbar ' + cls;
+      d.innerHTML = `<div class="b" style="height:${Math.max(6, v)}%"></div><div class="d">${days[i]}</div>`;
+      wrap.appendChild(d);
+    });
+  }
+  renderHistBars();
+
+  // ---- Histórico 24h line chart ----
+  const hc = document.getElementById('hist-chart');
+  function drawHistChart() {
+    const ctx = hc.getContext('2d');
     const dpr = window.devicePixelRatio || 1;
-    const r = canvas.getBoundingClientRect();
-    canvas.width = r.width * dpr;
-    canvas.height = 200 * dpr;
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.scale(dpr, dpr);
-  }
-  resize();
-  window.addEventListener('resize', () => { resize(); drawTrend(); });
-
-  function drawTrend() {
-    const rect = canvas.getBoundingClientRect();
-    const w = rect.width, h = 200;
+    const rect = hc.getBoundingClientRect();
+    hc.width = rect.width * dpr; hc.height = 180 * dpr;
+    ctx.setTransform(1,0,0,1,0,0); ctx.scale(dpr, dpr);
+    const w = rect.width, h = 180;
     ctx.clearRect(0, 0, w, h);
-
-    const y60 = h - (60 / 100) * h;
-    const y30 = h - (30 / 100) * h;
-    ctx.strokeStyle = 'rgba(29, 110, 91, 0.25)';
-    ctx.setLineDash([3, 4]);
-    ctx.beginPath(); ctx.moveTo(0, y60); ctx.lineTo(w, y60); ctx.stroke();
-    ctx.strokeStyle = 'rgba(178, 58, 47, 0.25)';
-    ctx.beginPath(); ctx.moveTo(0, y30); ctx.lineTo(w, y30); ctx.stroke();
-    ctx.setLineDash([]);
-
-    const step = w / (history.length - 1);
-
+    const data = [];
+    for (let i = 0; i < 48; i++) data.push(60 + Math.sin(i*0.3)*14 + (Math.random()-0.5)*8);
+    const step = w / (data.length - 1);
+    // area
+    ctx.beginPath(); ctx.moveTo(0, h);
+    data.forEach((v,i)=>ctx.lineTo(i*step, h-(v/100)*h)); ctx.lineTo(w,h); ctx.closePath();
+    const g = ctx.createLinearGradient(0,0,0,h);
+    g.addColorStop(0,'rgba(46,95,208,0.18)'); g.addColorStop(1,'rgba(46,95,208,0)');
+    ctx.fillStyle = g; ctx.fill();
+    // line
     ctx.beginPath();
-    ctx.moveTo(0, h);
-    history.forEach((v, i) => { ctx.lineTo(i * step, h - (v / 100) * h); });
-    ctx.lineTo(w, h);
-    ctx.closePath();
-    const grad = ctx.createLinearGradient(0, 0, 0, h);
-    grad.addColorStop(0, 'rgba(29, 110, 91, 0.18)');
-    grad.addColorStop(1, 'rgba(29, 110, 91, 0)');
-    ctx.fillStyle = grad;
-    ctx.fill();
-
-    ctx.beginPath();
-    history.forEach((v, i) => {
-      const x = i * step, y = h - (v / 100) * h;
-      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-    });
-    ctx.strokeStyle = '#1D6E5B';
-    ctx.lineWidth = 1.8;
-    ctx.lineJoin = 'round';
-    ctx.stroke();
-
-    const lx = (history.length - 1) * step;
-    const ly = h - (history[history.length - 1] / 100) * h;
-    ctx.beginPath();
-    ctx.arc(lx, ly, 3.5, 0, Math.PI * 2);
-    ctx.fillStyle = '#1D6E5B';
-    ctx.fill();
+    data.forEach((v,i)=>{ const x=i*step, y=h-(v/100)*h; i?ctx.lineTo(x,y):ctx.moveTo(x,y); });
+    ctx.strokeStyle = '#2E5FD0'; ctx.lineWidth = 2; ctx.lineJoin='round'; ctx.stroke();
   }
 
-  const axis = document.getElementById('trend-axis');
-  ['24h ago', '18h', '12h', '6h', 'now'].forEach(l => {
-    const s = document.createElement('span');
-    s.textContent = l;
-    axis.appendChild(s);
-  });
-
-  document.querySelectorAll('.scenario-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.scenario-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      scenario = btn.dataset.scenario;
-      currentIndex = target[scenario];
-      history.length = 0;
-      history.push(...generateHistory(scenario));
-      drawTrend();
-    });
-  });
-
-  function tick() {
-    const t = target[scenario];
-    currentIndex += (t - currentIndex) * 0.15 + (Math.random() - 0.5) * 4;
-    currentIndex = Math.max(5, Math.min(95, currentIndex));
-    displayIndex += (currentIndex - displayIndex) * 0.4;
-    setGauge(displayIndex);
-    updateState(displayIndex);
-    updateReadings(displayIndex);
-    history.shift();
-    history.push(currentIndex);
-    drawTrend();
+  // ---- Live clock ----
+  function tickClock() {
+    const n = new Date();
+    document.getElementById('clock').textContent = n.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
   }
+  tickClock(); setInterval(tickClock, 10000);
 
-  setGauge(currentIndex);
-  updateState(currentIndex);
-  updateReadings(currentIndex);
-  drawTrend();
-  setInterval(tick, 3000);
+  // ---- Init ----
+  applyScenario();
+  updateRing();
 </script>
 
 </body>
