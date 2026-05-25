@@ -1,0 +1,12 @@
+concentration_ppm,voltage_compensated_V,in_fit,note
+180,0.385,1,
+350,0.875,1,
+400,1.070,1,
+590,1.365,1,
+650,1.553,1,
+850,2.003,1,
+1100,2.120,0,soft saturation (knee)
+1220,2.254,0,saturated (ceiling ~2.3 V)
+1820,2.270,0,saturated
+2330,2.266,0,saturated
+3050,2.263,0,saturated
