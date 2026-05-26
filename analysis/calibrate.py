@@ -21,12 +21,18 @@ concentration where it is actually visible. The optional `in_fit` column
 (1/0) excludes saturated points from the linear fit while still letting them
 be plotted. Also accepts `concentration_g_L`.
 
-Fits V = m·c + b over the in-fit measurements, reports R², sensitivity and
-repeatability (mean SD / CV), and saves the curve to ../docs for the report.
+Default fit is *slope-only* through the origin (V = m·c), paired with the
+firmware's auto-tare so 0 ppm reads exactly 0 in the field. Pass
+`--with-intercept` to also overlay the OLS fit (V = m·c + b) for comparison.
+
+Reports R², sensitivity, repeatability (SD / CV), residual SD, LOD / LOQ,
+and saves the curve to ../docs for the report.
 
 Examples
 --------
-    python calibrate.py
+    python calibrate.py                       # slope-only (default)
+    python calibrate.py --with-intercept      # overlay OLS for comparison
+    python calibrate.py --weighted            # weighted slope-only (1/c²)
     python calibrate.py --error sem
     python calibrate.py --show-saturated
 """
@@ -78,9 +84,9 @@ def main() -> None:
     ap.add_argument("--weighted", action="store_true",
                     help="also fit weighted least squares (1/c^2 weights) and compare; "
                          "recommended here because the variance grows with concentration")
-    ap.add_argument("--through-origin", action="store_true",
-                    help="also fit a least-squares line forced through (0,0) and compare "
-                         "(physically: V=0 at c=0 ppm in deionised water)")
+    ap.add_argument("--with-intercept", action="store_true",
+                    help="also fit an ordinary least-squares line with intercept and "
+                         "overlay it for comparison against the default slope-only fit")
     ap.add_argument("--show-saturated", action="store_true",
                     help="also plot the excluded saturated points")
     ap.add_argument("--no-bands", action="store_true",
@@ -126,113 +132,100 @@ def main() -> None:
     if len(c) < 2:
         sys.exit("Need at least two in-fit measurements to fit a line.")
 
-    m, b = np.polyfit(c, v, 1)            # V = m*c + b
-    pred = m * c + b
-    ss_res = float(np.sum((v - pred) ** 2))
-    ss_tot = float(np.sum((v - v.mean()) ** 2))
-    r2 = 1 - ss_res / ss_tot if ss_tot else float("nan")
-
+    n = len(c)
     fit_agg = aggregate(fit_df)
     cv = (fit_agg["std"] / fit_agg["mean"]).replace([np.inf, -np.inf], np.nan) * 100
-
-    sign = "-" if b < 0 else "+"
     elabel = ERR_LABEL[args.error]
-    print(f"Fit over {len(c)} measurements in {len(fit_agg)} solutions "
+
+    # --- PRIMARY FIT: slope-only through the origin (V = m·c) ---
+    # Pairs with the firmware's auto-tare so 0 ppm reads 0 in the field.
+    m0 = float(np.sum(c * v) / np.sum(c ** 2))                # closed-form LSQ thru (0,0)
+    ss_res0 = float(np.sum((v - m0 * c) ** 2))
+    r2_0 = 1.0 - ss_res0 / float(np.sum(v ** 2))              # uncentered R²
+    s_yx0 = float(np.sqrt(ss_res0 / (n - 1)))                 # 1 param -> df = n-1
+    s_m0 = float(np.sqrt(s_yx0 ** 2 / np.sum(c ** 2)))
+    s_x0_0 = float(s_yx0 / abs(m0) * np.sqrt(1.0 + 1.0 / n))
+    lod0, loq0 = 3.3 * s_yx0 / abs(m0), 10.0 * s_yx0 / abs(m0)
+    dofw = fit_agg["n"] - 1
+    s_pool = float(np.sqrt(np.sum(dofw * fit_agg["std"] ** 2) / np.sum(dofw)))
+
+    print(f"Slope-only fit over {n} measurements in {len(fit_agg)} solutions "
           f"({c.min():.0f}–{c.max():.0f} {unit}):")
-    print(f"  V = {m:.6f} * c {sign} {abs(b):.4f}     (c in {unit}, V in volts)")
-    print(f"  R²  = {r2:.4f}")
-    print(f"  sensitivity = {m * 1000:.3f} mV per {unit}")
+    print(f"  V = {m0:.6f} * c     (intercept forced to 0; tare handles the offset)")
+    print(f"  R²_uncentered = {r2_0:.4f}")
+    print(f"  sensitivity   = {m0 * 1000:.3f} mV per {unit}")
     print(f"  repeatability: mean SD = {fit_agg['std'].mean() * 1000:.1f} mV, "
           f"mean CV = {cv.mean():.1f} %")
     print(f"  error bars shown = {elabel} (range {fit_agg['err'].min()*1000:.1f}"
           f"–{fit_agg['err'].max()*1000:.1f} mV)")
-    if m:
-        print(f"  inverse: c = (V - {b:.4f}) / {m:.6f}")
+    print(f"  inverse: c = (V - V_blank) / {m0:.6f}     (V_blank measured at boot)")
     if len(excl_df):
         lo = excl_df[conc_col].min()
         print(f"  excluded {len(excl_df)} saturated measurements (>= {lo:.0f} {unit})")
-
-    # --- regression statistics (Miller & Miller; LibreTexts/Harvey 5.4) ---
-    n = len(c)
-    Sxx = float(np.sum((c - c.mean()) ** 2))
-    s_yx = float(np.sqrt(ss_res / (n - 2)))          # residual SD about the line
-    s_m = float(np.sqrt(s_yx ** 2 / Sxx))            # SD of slope
-    s_b = float(s_yx * np.sqrt(np.sum(c ** 2) / (n * Sxx)))   # SD of intercept
-    s_x0 = float((s_yx / abs(m)) * np.sqrt(1.0 + 1.0 / n))    # ±conc, single reading
-    dofw = fit_agg["n"] - 1
-    s_pool = float(np.sqrt(np.sum(dofw * fit_agg["std"] ** 2) / np.sum(dofw)))
-    lod, loq = 3.3 * s_yx / abs(m), 10.0 * s_yx / abs(m)
     print("  --- regression statistics ---")
-    print(f"  residual SD s(y/x) = {s_yx*1000:.1f} mV  (df = {n-2})")
+    print(f"  residual SD s(y/x) = {s_yx0*1000:.1f} mV  (df = {n-1})")
     print(f"  pooled replicate SD = {s_pool*1000:.1f} mV")
-    print(f"  slope     m = {m:.6f} ± {s_m:.6f} V/{unit}")
-    t_b = b / s_b
-    verdict = ("intercept ≠ 0 (use OLS)" if abs(t_b) > 2 else
-               "intercept ≈ 0 (through-origin is justified)")
-    print(f"  intercept b = {b:.4f} ± {s_b:.4f} V   "
-          f"[t = {t_b:.2f}, df = {n-2}  →  {verdict}]")
-    print(f"  prediction uncertainty s_x0 ≈ ±{s_x0:.0f} {unit} per single reading")
-    print(f"  LOD = {lod:.0f} {unit},  LOQ = {loq:.0f} {unit}")
+    print(f"  slope m = {m0:.6f} ± {s_m0:.6f} V/{unit}")
+    print(f"  prediction uncertainty s_x0 ≈ ±{s_x0_0:.0f} {unit} per single reading")
+    print(f"  LOD = {lod0:.0f} {unit},  LOQ = {loq0:.0f} {unit}")
 
-    # --- regression forced through the origin (intercept = 0) ---
-    m0 = None
-    if args.through_origin:
-        m0 = float(np.sum(c * v) / np.sum(c ** 2))           # closed-form LSQ thru (0,0)
-        ss_res0 = float(np.sum((v - m0 * c) ** 2))
-        r2_0 = 1.0 - ss_res0 / float(np.sum(v ** 2))         # uncentered R²
-        s_yx0 = float(np.sqrt(ss_res0 / (n - 1)))            # only 1 param -> df = n-1
-        s_m0 = float(np.sqrt(s_yx0 ** 2 / np.sum(c ** 2)))
-        s_x0_zo = float(s_yx0 / abs(m0) * np.sqrt(1.0 + 1.0 / n))
-        lod0, loq0 = 3.3 * s_yx0 / abs(m0), 10.0 * s_yx0 / abs(m0)
-        # predicted concentration at the lowest standard with each fit
-        c_low = c.min()
-        v_low = v[c == c_low].mean()
-        chat_ols = (v_low - b) / m
-        chat_zo = v_low / m0
-        print("  --- through-origin (intercept forced to 0) ---")
-        print(f"  V = {m0:.6f} * c     (no intercept)")
-        print(f"  R²_uncentered      = {r2_0:.4f}")
-        print(f"  residual SD s(y/x) = {s_yx0*1000:.1f} mV  (df = {n-1})")
-        print(f"  slope m = {m0:.6f} ± {s_m0:.6f} V/{unit}")
-        print(f"  prediction uncertainty s_x0 ≈ ±{s_x0_zo:.0f} {unit} per single reading")
-        print(f"  LOD = {lod0:.0f} {unit},  LOQ = {loq0:.0f} {unit}")
-        print(f"  back-calc at lowest std ({c_low:.0f} {unit}): "
-              f"OLS={chat_ols:.0f}, thru0={chat_zo:.0f} {unit}")
+    # --- OPTIONAL OLS COMPARISON (V = m·c + b) ---
+    m = b = r2 = s_yx = s_m = s_b = s_x0 = sign = None
+    if args.with_intercept:
+        m, b = (float(x) for x in np.polyfit(c, v, 1))
+        ss_res = float(np.sum((v - (m * c + b)) ** 2))
+        ss_tot = float(np.sum((v - v.mean()) ** 2))
+        r2 = 1 - ss_res / ss_tot if ss_tot else float("nan")
+        Sxx = float(np.sum((c - c.mean()) ** 2))
+        s_yx = float(np.sqrt(ss_res / (n - 2)))
+        s_m = float(np.sqrt(s_yx ** 2 / Sxx))
+        s_b = float(s_yx * np.sqrt(np.sum(c ** 2) / (n * Sxx)))
+        s_x0 = float((s_yx / abs(m)) * np.sqrt(1.0 + 1.0 / n))
+        sign = "-" if b < 0 else "+"
+        t_b = b / s_b
+        verdict = ("OLS preferred (intercept is real)" if abs(t_b) > 2
+                   else "slope-only is justified (intercept ≈ 0)")
+        print("  --- OLS comparison (with intercept) ---")
+        print(f"  V = {m:.6f} * c {sign} {abs(b):.4f}")
+        print(f"  R² = {r2:.4f},  s(y/x) = {s_yx*1000:.1f} mV  (df = {n-2})")
+        print(f"  slope     m = {m:.6f} ± {s_m:.6f} V/{unit}")
+        print(f"  intercept b = {b:.4f} ± {s_b:.4f} V   "
+              f"[t = {t_b:.2f}, df = {n-2}  →  {verdict}]")
+        print(f"  prediction uncertainty s_x0 ≈ ±{s_x0:.0f} {unit} per single reading")
 
-    # --- weighted least squares (1/c^2): better for heteroscedastic data ---
-    mw = bw = sgnw = None
+    # --- weighted least squares thru origin (1/c^2): better for heteroscedasticity ---
+    mw0 = None
     if args.weighted:
-        w = 1.0 / c                                  # polyfit minimises (w*resid)^2
-        mw, bw = (float(x) for x in np.polyfit(c, v, 1, w=w))
+        w = 1.0 / c                                          # polyfit minimises (w*r)^2
+        # weighted slope thru origin: m = Σ w² c v / Σ w² c²
+        mw0 = float(np.sum((w ** 2) * c * v) / np.sum((w ** 2) * c ** 2))
 
-        def conc_err(mm, bb):
-            pe = np.abs(((v - bb) / mm - c) / c) * 100
+        def conc_err_slope(mm):
+            pe = np.abs((v / mm - c) / c) * 100
             band = (c >= 200) & (c <= 500)
             return pe.mean(), (pe[band].mean() if band.any() else float("nan"))
 
-        u_all, u_hy = conc_err(m, b)
-        w_all, w_hy = conc_err(mw, bw)
-        sgnw = "-" if bw < 0 else "+"
-        print("  --- weighted (1/c²) vs ordinary least squares ---")
-        print(f"  weighted: V = {mw:.6f} * c {sgnw} {abs(bw):.4f}")
+        u_all, u_hy = conc_err_slope(m0)
+        w_all, w_hy = conc_err_slope(mw0)
+        print("  --- weighted slope-only (1/c²) vs unweighted slope-only ---")
+        print(f"  weighted: V = {mw0:.6f} * c")
         print(f"  mean |error| back-calculated concentration:")
-        print(f"      overall          OLS {u_all:4.1f} %  ->  WLS {w_all:4.1f} %")
-        print(f"      hydrated 200-500 OLS {u_hy:4.1f} %  ->  WLS {w_hy:4.1f} %")
+        print(f"      overall          OLS-0 {u_all:4.1f} %  ->  WLS-0 {w_all:4.1f} %")
+        print(f"      hydrated 200-500 OLS-0 {u_hy:4.1f} %  ->  WLS-0 {w_hy:4.1f} %")
 
     # two stacked panels: calibration curve (top) + spread in mV (bottom)
     fig, (ax, axb) = plt.subplots(2, 1, figsize=(7.8, 6.4), sharex=True,
                                   gridspec_kw={"height_ratios": [3, 1]})
 
-    xs = np.linspace(c.min(), c.max(), 100)
-    ax.plot(xs, m * xs + b, color="#2E5FD0", lw=1.8, zorder=3,
-            label=f"OLS: V = {m:.4f}·c {sign} {abs(b):.3f}\nR² = {r2:.3f}")
-    if args.weighted and mw is not None:
-        ax.plot(xs, mw * xs + bw, color="#E5402F", lw=1.4, ls="--", zorder=3,
-                label=f"WLS 1/c²: V = {mw:.4f}·c {sgnw} {abs(bw):.3f}")
-    if args.through_origin and m0 is not None:
-        xs0 = np.linspace(0, c.max(), 100)
-        ax.plot(xs0, m0 * xs0, color="#2FB457", lw=1.4, ls=":", zorder=3,
-                label=f"thru (0,0): V = {m0:.4f}·c")
+    xs = np.linspace(0, c.max(), 100)
+    ax.plot(xs, m0 * xs, color="#2E5FD0", lw=1.8, zorder=3,
+            label=f"V = {m0:.4f}·c\nR²_unc = {r2_0:.3f}")
+    if args.weighted and mw0 is not None:
+        ax.plot(xs, mw0 * xs, color="#E5402F", lw=1.4, ls="--", zorder=3,
+                label=f"WLS 1/c²: V = {mw0:.4f}·c")
+    if args.with_intercept and m is not None:
+        ax.plot(xs, m * xs + b, color="#6B7A99", lw=1.2, ls=":", zorder=3,
+                label=f"OLS comparison: V = {m:.4f}·c {sign} {abs(b):.3f}")
 
     markers = {1: ("#0E2A4E", "o"), 2: ("#2E5FD0", "s")}
 
@@ -277,7 +270,7 @@ def main() -> None:
         ax.set_xlim(x0, x1)
 
     ax.set_ylabel("compensated voltage (V)")
-    title = f"AquaAlert — TDS sensor calibration (NaCl), mean ± {elabel}"
+    title = f"AquaAlert — TDS sensor calibration (NaCl), slope-only · mean ± {elabel}"
     if mag != 1:
         title += f"  (error bars ×{mag:g})"
     ax.set_title(title)

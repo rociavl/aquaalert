@@ -15,15 +15,15 @@
  *   web page (or any BLE client) can plot it in real time. Uses the Nordic
  *   UART Service (NUS), which Web Bluetooth supports out of the box.
  *
- *   Calibration line (from calibrate.py over the 57-850 ppm linear range):
- *      V = 0.0025 * c - 0.059      (in volts, c in ppm)
- *   The intercept is replaced by an auto-tare at boot: the firmware holds
- *   for 5 s with the sensor in clean (deionised) water, measures V_blank,
- *   and from then on uses the slope-only formula
- *      c = (V_compensated - V_blank) / 0.0025
- *   so a reading of 0 ppm really gives 0 (the cero is physically measured,
- *   not extrapolated). To re-tare, just reset the ESP32 with the sensor in
- *   clean water.
+ *   Calibration model (from calibrate.py, slope-only LSQ through the origin
+ *   over the 57-850 ppm linear range):
+ *      V = 0.002374 * c        (V_compensated in volts, c in ppm)
+ *   The fixed cero is anchored physically by an auto-tare at boot: the
+ *   firmware holds 5 s with the sensor in clean (deionised) water, measures
+ *   V_blank, and from then on uses
+ *      c = (V_compensated - V_blank) / 0.002374
+ *   so a reading of 0 ppm really gives 0. To re-tare, just reset the ESP32
+ *   with the sensor in clean water.
  *
  * BLE protocol:
  *   - Device name:        AquaAlertBottle
@@ -51,7 +51,7 @@
 #define LED_PIN          2        // built-in LED on most ESP32 DevKits
 
 // Slope-only calibration (intercept replaced by auto-tare at boot)
-#define CAL_M            0.0025f  // V per ppm, from NaCl calibration
+#define CAL_M            0.002374f  // V per ppm, slope-only LSQ from calibrate.py
 
 // Auto-tare on boot
 #define TARE_DURATION_MS 5000     // sample the blank for 5 s after reset
