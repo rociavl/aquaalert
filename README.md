@@ -29,10 +29,12 @@ Both stream data to a multimodal fusion algorithm that outputs the hydration ind
 /index.html              ← the user app (mobile-first PWA) — this is the site root
 /dashboard.html          ← caregiver console (technical view)
 /pitch.html              ← project landing / pitch page (for the presentation)
+/live.html               ← live BLE viewer: connects to the ESP32 and plots ppm
 /manifest.webmanifest    ← PWA manifest (add-to-home-screen)
 /icon.svg, /icon-*.png   ← app icons
 /firmware/
   aquaalert_tds_calibration/  ← ESP32 firmware for bottle TDS/conductance (used)
+  aquaalert_tds_ble/          ← ESP32 firmware: streams calibrated ppm over BLE (NUS)
   aquaalert_bia/              ← ESP32 firmware for ankle BIA (needs bench tuning)
 /analysis/
   read_serial.py         ← serial capture → timestamped CSV
@@ -50,6 +52,7 @@ The app is the GitHub Pages root — open it on a phone and add it to the home s
 - **App (user):** https://rociavl.github.io/aquaalert/
 - **Caregiver console:** https://rociavl.github.io/aquaalert/dashboard.html
 - **Project pitch:** https://rociavl.github.io/aquaalert/pitch.html
+- **Live BLE viewer:** https://rociavl.github.io/aquaalert/live.html  *(Chrome/Edge — Web Bluetooth)*
 
 ## Market context
 

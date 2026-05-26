@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#2E5FD0">
+<title>AquaAlert — TDS en vivo</title>
+<style>
+  :root {
+    --blue: #2E5FD0;
+    --navy: #0E2A4E;
+    --bg:   #F5F7FB;
+    --ink:  #0E2A4E;
+    --mut:  #6B7A99;
+    --card: #FFFFFF;
+    --line: #EEF2F8;
+    --green:  #2FB457;
+    --yellow: #F2C200;
+    --orange: #F5921E;
+    --red:    #E5402F;
+  }
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font: 16px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, system-ui, sans-serif;
+    background: var(--bg); color: var(--ink);
+    padding: 16px; padding-top: max(16px, env(safe-area-inset-top));
+    padding-bottom: max(16px, env(safe-area-inset-bottom));
+    max-width: 720px; margin: 0 auto;
+  }
+  header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 14px;
+  }
+  h1 { font-size: 18px; margin: 0; letter-spacing: -0.01em; }
+  .sub { font-size: 12px; color: var(--mut); }
+  .btn {
+    background: var(--blue); color: #fff; border: 0;
+    padding: 10px 18px; border-radius: 999px; font-weight: 600;
+    cursor: pointer; font-size: 14px;
+  }
+  .btn[disabled] { opacity: .45; cursor: not-allowed; }
+  .btn.ghost { background: transparent; color: var(--blue); border: 1px solid var(--blue); }
+
+  .card {
+    background: var(--card); border-radius: 16px; padding: 18px;
+    box-shadow: 0 1px 2px rgba(15,42,78,.06);
+    margin-bottom: 12px;
+  }
+
+  .reading { text-align: center; padding: 28px 18px; }
+  .reading .lbl { color: var(--mut); font-size: 12px; letter-spacing: .06em; text-transform: uppercase; }
+  .reading .val {
+    font-size: 72px; font-weight: 700; color: var(--navy);
+    margin: 8px 0 2px; line-height: 1; font-feature-settings: "tnum";
+  }
+  .reading .unit { color: var(--mut); font-size: 14px; }
+  .band {
+    display: inline-block; padding: 5px 14px; border-radius: 999px;
+    font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
+    margin-top: 14px; background: var(--line); color: var(--mut);
+    transition: background .25s, color .25s;
+  }
+
+  .chart-wrap { height: 260px; }
+  canvas { width: 100% !important; height: 100% !important; }
+
+  .status { font-size: 13px; color: var(--mut); margin-top: 6px; }
+  .status.ok  { color: var(--green); }
+  .status.err { color: var(--red);   }
+
+  .legend { display: flex; gap: 12px; flex-wrap: wrap; font-size: 11px; color: var(--mut); margin-top: 6px; }
+  .legend span { display: inline-flex; align-items: center; gap: 5px; }
+  .legend i { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+
+  .footer { color: var(--mut); font-size: 12px; text-align: center; margin-top: 8px; }
+  code { background: var(--line); padding: 1px 6px; border-radius: 4px; font-size: 12px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>AquaAlert · TDS en vivo</h1>
+    <div class="sub">Lectura del sensor salival vía Bluetooth</div>
+  </div>
+  <button class="btn" id="connect">Conectar</button>
+</header>
+
+<div class="card reading">
+  <div class="lbl">TDS salival calibrado</div>
+  <div class="val" id="ppm">—</div>
+  <div class="unit">ppm</div>
+  <div class="band" id="band">esperando…</div>
+</div>
+
+<div class="card">
+  <div class="chart-wrap"><canvas id="chart"></canvas></div>
+  <div class="legend">
+    <span><i style="background:#2FB457"></i>200–500 hidratado</span>
+    <span><i style="background:#F2C200"></i>500–700 leve</span>
+    <span><i style="background:#F5921E"></i>700–900 moderado</span>
+    <span><i style="background:#E5402F"></i>≥900 severo</span>
+  </div>
+</div>
+
+<div class="status" id="status">No conectado. Pulsa <strong>Conectar</strong> y elige <code>AquaAlertBottle</code>.</div>
+<div class="footer">Calibración: V = 0,0025·c − 0,059 &nbsp;·&nbsp; c = (V + 0,059) / 0,0025</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+// Nordic UART Service (NUS) — what the ESP32 firmware advertises.
+const NUS_SERVICE = '6e400001-b5a3-f393-e0a9-e50e24dcca9e';
+const NUS_TX      = '6e400003-b5a3-f393-e0a9-e50e24dcca9e';
+
+const ppmEl     = document.getElementById('ppm');
+const bandEl    = document.getElementById('band');
+const statusEl  = document.getElementById('status');
+const connectBtn = document.getElementById('connect');
+
+const WINDOW = 60;            // keep last 60 readings (~1 min at 1 Hz)
+
+const chart = new Chart(document.getElementById('chart').getContext('2d'), {
+  type: 'line',
+  data: {
+    labels: [],
+    datasets: [{
+      label: 'ppm',
+      data: [],
+      borderColor: '#2E5FD0',
+      backgroundColor: 'rgba(46,95,208,.12)',
+      tension: .25, fill: true, pointRadius: 0, borderWidth: 2,
+    }],
+  },
+  options: {
+    animation: false, responsive: true, maintainAspectRatio: false,
+    scales: {
+      y: { beginAtZero: true, grid: { color: '#EEF2F8' },
+           title: { display: true, text: 'ppm', color: '#6B7A99' } },
+      x: { ticks: { maxTicksLimit: 6, color: '#6B7A99', font: { size: 10 } },
+           grid: { display: false } },
+    },
+    plugins: { legend: { display: false } },
+  },
+});
+
+function bandOf(ppm) {
+  if (ppm < 500) return { name: 'Hidratado', color: '#2FB457', bg: 'rgba(47,180,87,.16)'  };
+  if (ppm < 700) return { name: 'Leve',      color: '#F2C200', bg: 'rgba(242,194,0,.18)'  };
+  if (ppm < 900) return { name: 'Moderado',  color: '#F5921E', bg: 'rgba(245,146,30,.18)' };
+  return            { name: 'Severo',    color: '#E5402F', bg: 'rgba(229,64,47,.18)'  };
+}
+
+function setStatus(text, kind) {
+  statusEl.innerHTML = text;
+  statusEl.className = 'status' + (kind ? ' ' + kind : '');
+}
+
+function pushReading(ppm) {
+  ppm = Math.max(0, ppm);
+  ppmEl.textContent = ppm.toFixed(0);
+  const b = bandOf(ppm);
+  bandEl.textContent = b.name;
+  bandEl.style.background = b.bg;
+  bandEl.style.color = b.color;
+
+  const t = new Date();
+  const hh = String(t.getHours()).padStart(2, '0');
+  const mm = String(t.getMinutes()).padStart(2, '0');
+  const ss = String(t.getSeconds()).padStart(2, '0');
+  chart.data.labels.push(`${hh}:${mm}:${ss}`);
+  chart.data.datasets[0].data.push(ppm);
+  if (chart.data.labels.length > WINDOW) {
+    chart.data.labels.shift();
+    chart.data.datasets[0].data.shift();
+  }
+  chart.update('none');
+}
+
+// BLE notifications arrive as fragments; parse complete '\n'-terminated lines.
+let buf = '';
+function handleNotification(event) {
+  buf += new TextDecoder().decode(event.target.value);
+  let i;
+  while ((i = buf.indexOf('\n')) >= 0) {
+    const line = buf.slice(0, i).trim();
+    buf = buf.slice(i + 1);
+    if (!line) continue;
+    const n = parseFloat(line);
+    if (!isNaN(n)) pushReading(n);
+  }
+}
+
+connectBtn.addEventListener('click', async () => {
+  if (!navigator.bluetooth) {
+    setStatus('Tu navegador no soporta Web Bluetooth. Usa <strong>Chrome / Edge</strong> en Android, macOS, Windows o Linux. iOS no es compatible.', 'err');
+    return;
+  }
+  try {
+    setStatus('Buscando dispositivos…');
+    const device = await navigator.bluetooth.requestDevice({
+      filters: [{ namePrefix: 'AquaAlert' }],
+      optionalServices: [NUS_SERVICE],
+    });
+    setStatus('Conectando a ' + device.name + '…');
+    const server  = await device.gatt.connect();
+    const service = await server.getPrimaryService(NUS_SERVICE);
+    const tx      = await service.getCharacteristic(NUS_TX);
+    await tx.startNotifications();
+    tx.addEventListener('characteristicvaluechanged', handleNotification);
+
+    setStatus('Conectado a <strong>' + device.name + '</strong>', 'ok');
+    connectBtn.textContent = 'Conectado';
+    connectBtn.disabled = true;
+
+    device.addEventListener('gattserverdisconnected', () => {
+      setStatus('Desconectado del dispositivo.', 'err');
+      connectBtn.textContent = 'Conectar';
+      connectBtn.disabled = false;
+    });
+  } catch (e) {
+    if (e.name === 'NotFoundError') setStatus('No has elegido ningún dispositivo.', '');
+    else setStatus('Error: ' + e.message, 'err');
+  }
+});
+</script>
+</body>
+</html>
