@@ -17,8 +17,13 @@
  *
  *   Calibration line (from calibrate.py over the 57-850 ppm linear range):
  *      V = 0.0025 * c - 0.059      (in volts, c in ppm)
- *   Inverse used here:
- *      c = (V + 0.059) / 0.0025
+ *   The intercept is replaced by an auto-tare at boot: the firmware holds
+ *   for 5 s with the sensor in clean (deionised) water, measures V_blank,
+ *   and from then on uses the slope-only formula
+ *      c = (V_compensated - V_blank) / 0.0025
+ *   so a reading of 0 ppm really gives 0 (the cero is physically measured,
+ *   not extrapolated). To re-tare, just reset the ESP32 with the sensor in
+ *   clean water.
  *
  * BLE protocol:
  *   - Device name:        AquaAlertBottle
@@ -43,10 +48,14 @@
 #define SAMPLE_PERIOD_MS 40
 #define NOTIFY_PERIOD_MS 1000     // send one ppm reading per second
 #define WATER_TEMP_C     25.0f
+#define LED_PIN          2        // built-in LED on most ESP32 DevKits
 
-// Calibration constants (V = CAL_M * c + CAL_B  ->  c = (V - CAL_B) / CAL_M)
-#define CAL_M            0.0025f
-#define CAL_B           -0.059f
+// Slope-only calibration (intercept replaced by auto-tare at boot)
+#define CAL_M            0.0025f  // V per ppm, from NaCl calibration
+
+// Auto-tare on boot
+#define TARE_DURATION_MS 5000     // sample the blank for 5 s after reset
+#define TARE_PERIOD_MS   100      // one ADC read every 100 ms (~50 samples)
 
 // Nordic UART Service UUIDs
 #define NUS_SERVICE      "6E400001-B5A3-F393-E0A9-E50E24DCCA9E"
@@ -57,6 +66,7 @@ int   analogBuffer[SCOUNT];
 int   analogBufferTemp[SCOUNT];
 int   analogBufferIndex = 0;
 float temperature       = WATER_TEMP_C;
+float V_blank           = 0.0f;   // set by autoTare() at boot
 
 BLECharacteristic* txChar = nullptr;
 bool clientConnected = false;
@@ -89,6 +99,28 @@ int getMedianNum(int bArray[], int iFilterLen) {
   return bTemp;
 }
 
+// ---------------- AUTO-TARE -------------------------------------------------
+// Hold the sensor in clean water for TARE_DURATION_MS after reset; the LED
+// blinks the whole time. Captures the sensor's actual zero so 0 ppm reads 0.
+void autoTare() {
+  Serial.println(F("# Taring (5 s) — keep the sensor in clean water..."));
+  const int N = TARE_DURATION_MS / TARE_PERIOD_MS;
+  int samples[N];
+  for (int i = 0; i < N; i++) {
+    samples[i] = analogRead(TDS_PIN);
+    digitalWrite(LED_PIN, (i & 1) ? HIGH : LOW);    // blink while taring
+    delay(TARE_PERIOD_MS);
+  }
+  digitalWrite(LED_PIN, LOW);
+  int med = getMedianNum(samples, N);               // robust against spikes
+  float V_raw = med * VREF / ADC_RESOLUTION;
+  float coef  = 1.0f + 0.02f * (temperature - 25.0f);
+  V_blank     = V_raw / coef;
+  Serial.print(F("# tared at V_blank = "));
+  Serial.print(V_blank, 4);
+  Serial.println(F(" V"));
+}
+
 // ---------------- SETUP -----------------------------------------------------
 void setup() {
   Serial.begin(115200);
@@ -100,6 +132,10 @@ void setup() {
   analogReadResolution(12);
   analogSetPinAttenuation(TDS_PIN, ADC_11db);
   pinMode(TDS_PIN, INPUT);
+  pinMode(LED_PIN, OUTPUT);
+
+  // capture the sensor zero *before* BLE so the user knows what's happening
+  autoTare();
 
   // BLE
   BLEDevice::init("AquaAlertBottle");
@@ -143,9 +179,10 @@ void loop() {
     float coef   = 1.0f + 0.02f * (temperature - 25.0f);
     float V_comp = V / coef;
 
-    // apply calibration:  c = (V - b) / m
-    float ppm = (V_comp - CAL_B) / CAL_M;
-    if (ppm < 0.0f) ppm = 0.0f;          // clamp tiny negative values from noise
+    // slope-only calibration with the measured blank:
+    //   c = (V_compensated - V_blank) / m   ->  0 ppm reads exactly 0
+    float ppm = (V_comp - V_blank) / CAL_M;
+    if (ppm < 0.0f) ppm = 0.0f;          // clamp noise dips below the blank
 
     // serial debug
     Serial.print(millis());      Serial.print(',');
