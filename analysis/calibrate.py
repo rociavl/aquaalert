@@ -78,6 +78,9 @@ def main() -> None:
     ap.add_argument("--weighted", action="store_true",
                     help="also fit weighted least squares (1/c^2 weights) and compare; "
                          "recommended here because the variance grows with concentration")
+    ap.add_argument("--through-origin", action="store_true",
+                    help="also fit a least-squares line forced through (0,0) and compare "
+                         "(physically: V=0 at c=0 ppm in deionised water)")
     ap.add_argument("--show-saturated", action="store_true",
                     help="also plot the excluded saturated points")
     ap.add_argument("--no-bands", action="store_true",
@@ -163,9 +166,38 @@ def main() -> None:
     print(f"  residual SD s(y/x) = {s_yx*1000:.1f} mV  (df = {n-2})")
     print(f"  pooled replicate SD = {s_pool*1000:.1f} mV")
     print(f"  slope     m = {m:.6f} ± {s_m:.6f} V/{unit}")
-    print(f"  intercept b = {b:.4f} ± {s_b:.4f} V")
+    t_b = b / s_b
+    verdict = ("intercept ≠ 0 (use OLS)" if abs(t_b) > 2 else
+               "intercept ≈ 0 (through-origin is justified)")
+    print(f"  intercept b = {b:.4f} ± {s_b:.4f} V   "
+          f"[t = {t_b:.2f}, df = {n-2}  →  {verdict}]")
     print(f"  prediction uncertainty s_x0 ≈ ±{s_x0:.0f} {unit} per single reading")
     print(f"  LOD = {lod:.0f} {unit},  LOQ = {loq:.0f} {unit}")
+
+    # --- regression forced through the origin (intercept = 0) ---
+    m0 = None
+    if args.through_origin:
+        m0 = float(np.sum(c * v) / np.sum(c ** 2))           # closed-form LSQ thru (0,0)
+        ss_res0 = float(np.sum((v - m0 * c) ** 2))
+        r2_0 = 1.0 - ss_res0 / float(np.sum(v ** 2))         # uncentered R²
+        s_yx0 = float(np.sqrt(ss_res0 / (n - 1)))            # only 1 param -> df = n-1
+        s_m0 = float(np.sqrt(s_yx0 ** 2 / np.sum(c ** 2)))
+        s_x0_zo = float(s_yx0 / abs(m0) * np.sqrt(1.0 + 1.0 / n))
+        lod0, loq0 = 3.3 * s_yx0 / abs(m0), 10.0 * s_yx0 / abs(m0)
+        # predicted concentration at the lowest standard with each fit
+        c_low = c.min()
+        v_low = v[c == c_low].mean()
+        chat_ols = (v_low - b) / m
+        chat_zo = v_low / m0
+        print("  --- through-origin (intercept forced to 0) ---")
+        print(f"  V = {m0:.6f} * c     (no intercept)")
+        print(f"  R²_uncentered      = {r2_0:.4f}")
+        print(f"  residual SD s(y/x) = {s_yx0*1000:.1f} mV  (df = {n-1})")
+        print(f"  slope m = {m0:.6f} ± {s_m0:.6f} V/{unit}")
+        print(f"  prediction uncertainty s_x0 ≈ ±{s_x0_zo:.0f} {unit} per single reading")
+        print(f"  LOD = {lod0:.0f} {unit},  LOQ = {loq0:.0f} {unit}")
+        print(f"  back-calc at lowest std ({c_low:.0f} {unit}): "
+              f"OLS={chat_ols:.0f}, thru0={chat_zo:.0f} {unit}")
 
     # --- weighted least squares (1/c^2): better for heteroscedastic data ---
     mw = bw = sgnw = None
@@ -197,6 +229,10 @@ def main() -> None:
     if args.weighted and mw is not None:
         ax.plot(xs, mw * xs + bw, color="#E5402F", lw=1.4, ls="--", zorder=3,
                 label=f"WLS 1/c²: V = {mw:.4f}·c {sgnw} {abs(bw):.3f}")
+    if args.through_origin and m0 is not None:
+        xs0 = np.linspace(0, c.max(), 100)
+        ax.plot(xs0, m0 * xs0, color="#2FB457", lw=1.4, ls=":", zorder=3,
+                label=f"thru (0,0): V = {m0:.4f}·c")
 
     markers = {1: ("#0E2A4E", "o"), 2: ("#2E5FD0", "s")}
 
