@@ -169,6 +169,34 @@ def main() -> None:
     print(f"  prediction uncertainty s_x0 ≈ ±{s_x0_0:.0f} {unit} per single reading")
     print(f"  LOD = {lod0:.0f} {unit},  LOQ = {loq0:.0f} {unit}")
 
+    # --- prediction error: back-calc concentration from V with V = m·c ---
+    c_hat = v / m0                                     # per-measurement prediction
+    err_ppm = c_hat - c                                # signed error in ppm
+    err_pct = np.where(c > 0, err_ppm / c * 100, np.nan)
+    day_col = (fit_df["day"].to_numpy() if "day" in fit_df.columns
+               else np.ones_like(c, dtype=int))
+    err_df = (pd.DataFrame({"c": c, "c_hat": c_hat, "err": err_ppm,
+                            "err_pct": err_pct, "day": day_col})
+                .groupby(["c", "day"], as_index=False)
+                .agg(c_hat_mean=("c_hat", "mean"),
+                     c_hat_sd  =("c_hat", "std"),
+                     err_mean  =("err", "mean"),
+                     err_pct_mean=("err_pct", "mean"),
+                     n=("c", "size")))
+    err_df["c_hat_sd"] = err_df["c_hat_sd"].fillna(0.0)
+    rmse = float(np.sqrt(np.mean(err_ppm ** 2)))
+    mae = float(np.mean(np.abs(err_ppm)))
+    band = (c >= 200) & (c <= 500)
+    mae_band = float(np.mean(np.abs(err_ppm[band]))) if band.any() else float("nan")
+    print("  --- prediction error (back-calculated concentration from V) ---")
+    print(f"     true     predicted          error      error")
+    print(f"    (ppm)   (ppm) mean ± SD      (ppm)       (%)")
+    for _, r in err_df.iterrows():
+        print(f"    {r['c']:5.0f}    {r['c_hat_mean']:6.1f} ± {r['c_hat_sd']:4.1f}     "
+              f"{r['err_mean']:+7.1f}    {r['err_pct_mean']:+6.1f}")
+    print(f"  overall: MAE = {mae:.1f} ppm,  RMSE = {rmse:.1f} ppm")
+    print(f"  hydrated band 200–500 ppm: MAE = {mae_band:.1f} ppm")
+
     # --- OPTIONAL OLS COMPARISON (V = m·c + b) ---
     m = b = r2 = s_yx = s_m = s_b = s_x0 = sign = None
     if args.with_intercept:
@@ -213,9 +241,9 @@ def main() -> None:
         print(f"      overall          OLS-0 {u_all:4.1f} %  ->  WLS-0 {w_all:4.1f} %")
         print(f"      hydrated 200-500 OLS-0 {u_hy:4.1f} %  ->  WLS-0 {w_hy:4.1f} %")
 
-    # two stacked panels: calibration curve (top) + spread in mV (bottom)
-    fig, (ax, axb) = plt.subplots(2, 1, figsize=(7.8, 6.4), sharex=True,
-                                  gridspec_kw={"height_ratios": [3, 1]})
+    # three stacked panels: curve / replicate spread / prediction error
+    fig, (ax, axb, axc) = plt.subplots(3, 1, figsize=(7.8, 8.0), sharex=True,
+                                       gridspec_kw={"height_ratios": [3, 1, 1.2]})
 
     xs = np.linspace(0, c.max(), 100)
     ax.plot(xs, m0 * xs, color="#2E5FD0", lw=1.8, zorder=3,
@@ -289,10 +317,23 @@ def main() -> None:
     axb.axhline(mean_err_mv, color="#888", ls="--", lw=1,
                 label=f"mean {elabel} = {mean_err_mv:.1f} mV")
     axb.set_ylim(bottom=0)
-    axb.set_xlabel(f"reference concentration ({unit})  ·  bands: HydroSense salivary thresholds")
     axb.set_ylabel(f"± {elabel} (mV)")
     axb.grid(True, alpha=0.2)
     axb.legend(loc="upper left", frameon=False, fontsize=8)
+
+    # third panel: prediction error in ppm (back-calc c_hat - c_true)
+    for d_, grp_ in err_df.groupby("day"):
+        color, mk = markers.get(int(d_), ("#0E2A4E", "o"))
+        axc.errorbar(grp_["c"], grp_["err_mean"], yerr=grp_["c_hat_sd"], fmt=mk,
+                     color=color, ms=4, lw=0, elinewidth=1.0, capsize=2,
+                     ecolor=color, zorder=5)
+    axc.axhline(0, color="#0E2A4E", lw=1, alpha=0.5)
+    axc.axhline(mae, color="#888", ls=":", lw=1, label=f"MAE = {mae:.1f} ppm")
+    axc.axhline(-mae, color="#888", ls=":", lw=1)
+    axc.set_xlabel(f"reference concentration ({unit})  ·  bands: HydroSense salivary thresholds")
+    axc.set_ylabel("prediction error (ppm)")
+    axc.grid(True, alpha=0.2)
+    axc.legend(loc="upper right", frameon=False, fontsize=8)
 
     fig.tight_layout()
     args.out.parent.mkdir(parents=True, exist_ok=True)
