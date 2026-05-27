@@ -292,6 +292,11 @@ def main() -> None:
         ax.text(df[conc_col].max(), 2.31, "sensor ceiling ~2.3 V",
                 ha="right", va="bottom", fontsize=8, color="#B23A2F")
 
+    # pin the origin to the bottom-left corner so the V = m·c line visibly
+    # starts at (0, 0) — matplotlib's auto-padding otherwise leaves a small gap
+    ax.set_xlim(left=0)
+    ax.set_ylim(bottom=0)
+
     # HydroSense (IJSRSET 2025) salivary hydration bands, in ppm TDS
     if not args.no_bands and unit == "ppm":
         x0, x1 = ax.get_xlim()
