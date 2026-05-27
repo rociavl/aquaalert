@@ -54,7 +54,7 @@ REPLICATES_CSV = ROOT / "data" / "calibration_replicates.csv"
 MEANS_CSV = ROOT / "data" / "calibration.csv"
 DEFAULT_CSV = REPLICATES_CSV if REPLICATES_CSV.exists() else MEANS_CSV
 SIGNAL = "voltage_compensated_V"
-ERR_LABEL = {"sd": "SD", "sem": "SEM", "ci": "95% CI"}
+ERR_LABEL = {"sd": "SD", "sem": "SEM", "ci": "95% CI", "pred": "pred. error"}
 
 
 def tcrit(n: int, conf: float = 0.95) -> float:
@@ -76,8 +76,9 @@ def main() -> None:
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--csv", type=Path, default=DEFAULT_CSV)
     ap.add_argument("--out", type=Path, default=ROOT / "docs" / "calibration_curve.png")
-    ap.add_argument("--error", choices=["sd", "sem", "ci"], default="sd",
-                    help="error bars: sd (spread), sem (SD/sqrt n), ci (95%% t-interval)")
+    ap.add_argument("--error", choices=["sd", "sem", "ci", "pred"], default="sd",
+                    help="error bars: sd (spread), sem (SD/sqrt n), ci (95%% t-interval), "
+                         "pred (|residual to the fitted line| — the prediction error)")
     ap.add_argument("--err-magnify", type=float, default=1.0,
                     help="exaggerate the curve's error bars by this factor so they "
                          "are visible (labelled on the plot); the lower panel stays 1:1")
@@ -114,6 +115,16 @@ def main() -> None:
     else:
         fit_df, excl_df = df, df.iloc[0:0]
 
+    # --- fit over the individual in-fit measurements (honest scatter) ---
+    c = fit_df[conc_col].to_numpy(float)
+    v = fit_df[SIGNAL].to_numpy(float)
+    if len(c) < 2:
+        sys.exit("Need at least two in-fit measurements to fit a line.")
+    n = len(c)
+
+    # primary slope-only slope (needed up front for the "pred" error-bar mode)
+    m0 = float(np.sum(c * v) / np.sum(c ** 2))
+
     def aggregate(d: pd.DataFrame) -> pd.DataFrame:
         """Mean / SD / n (+ chosen error bar) of the signal per concentration."""
         keys = [conc_col] + (["day"] if "day" in d.columns else [])
@@ -125,24 +136,18 @@ def main() -> None:
             a["err"] = a["std"]
         elif args.error == "sem":
             a["err"] = sem
-        else:  # ci
+        elif args.error == "ci":
             a["err"] = a["n"].apply(lambda nn: tcrit(int(nn))) * sem
+        else:  # pred: |observed mean V - fitted V|, per concentration
+            a["err"] = (a["mean"] - m0 * a[conc_col]).abs()
         return a.sort_values(conc_col)
 
-    # --- fit over the individual in-fit measurements (honest scatter) ---
-    c = fit_df[conc_col].to_numpy(float)
-    v = fit_df[SIGNAL].to_numpy(float)
-    if len(c) < 2:
-        sys.exit("Need at least two in-fit measurements to fit a line.")
-
-    n = len(c)
     fit_agg = aggregate(fit_df)
     cv = (fit_agg["std"] / fit_agg["mean"]).replace([np.inf, -np.inf], np.nan) * 100
     elabel = ERR_LABEL[args.error]
 
     # --- PRIMARY FIT: slope-only through the origin (V = m·c) ---
-    # Pairs with the firmware's auto-tare so 0 ppm reads 0 in the field.
-    m0 = float(np.sum(c * v) / np.sum(c ** 2))                # closed-form LSQ thru (0,0)
+    # m0 already computed above (needed by aggregate); finish the stats here.
     ss_res0 = float(np.sum((v - m0 * c) ** 2))
     r2_0 = 1.0 - ss_res0 / float(np.sum(v ** 2))              # uncentered R²
     s_yx0 = float(np.sqrt(ss_res0 / (n - 1)))                 # 1 param -> df = n-1
