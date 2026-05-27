@@ -91,6 +91,9 @@ def main() -> None:
                     help="also plot the excluded saturated points")
     ap.add_argument("--no-bands", action="store_true",
                     help="hide the HydroSense salivary hydration bands")
+    ap.add_argument("--simple", action="store_true",
+                    help="render just the calibration curve (no SD / error panels) — "
+                         "use for the presentation / pitch slide")
     args = ap.parse_args()
 
     if not args.csv.exists():
@@ -241,9 +244,13 @@ def main() -> None:
         print(f"      overall          OLS-0 {u_all:4.1f} %  ->  WLS-0 {w_all:4.1f} %")
         print(f"      hydrated 200-500 OLS-0 {u_hy:4.1f} %  ->  WLS-0 {w_hy:4.1f} %")
 
-    # three stacked panels: curve / replicate spread / prediction error
-    fig, (ax, axb, axc) = plt.subplots(3, 1, figsize=(7.8, 8.0), sharex=True,
-                                       gridspec_kw={"height_ratios": [3, 1, 1.2]})
+    # figure layout: simple = one panel for slides; default = 3-panel diagnostic
+    if args.simple:
+        fig, ax = plt.subplots(figsize=(8.4, 5.6))
+        axb = axc = None
+    else:
+        fig, (ax, axb, axc) = plt.subplots(3, 1, figsize=(7.8, 8.0), sharex=True,
+                                           gridspec_kw={"height_ratios": [3, 1, 1.2]})
 
     xs = np.linspace(0, c.max(), 100)
     ax.plot(xs, m0 * xs, color="#2E5FD0", lw=1.8, zorder=3,
@@ -298,42 +305,46 @@ def main() -> None:
         ax.set_xlim(x0, x1)
 
     ax.set_ylabel("compensated voltage (V)")
-    title = f"AquaAlert — TDS sensor calibration (NaCl), slope-only · mean ± {elabel}"
+    if args.simple:
+        title = "AquaAlert — TDS sensor calibration (NaCl)"
+        ax.set_xlabel(f"reference concentration ({unit})")
+    else:
+        title = f"AquaAlert — TDS sensor calibration (NaCl), slope-only · mean ± {elabel}"
     if mag != 1:
         title += f"  (error bars ×{mag:g})"
     ax.set_title(title)
     ax.grid(True, alpha=0.2)
     ax.legend(loc="lower right", frameon=False)
 
-    # bottom panel: the spread itself, in mV, where it is actually visible
-    mean_err_mv = fit_agg["err"].mean() * 1000
-    for d, grp in (fit_agg.groupby("day") if "day" in fit_agg.columns
-                   else [(None, fit_agg)]):
-        color, mk = markers.get(int(d), ("#0E2A4E", "o")) if d is not None \
-            else ("#0E2A4E", "o")
-        axb.vlines(grp[conc_col], 0, grp["err"] * 1000, color=color, lw=1.2, alpha=0.6)
-        axb.scatter(grp[conc_col], grp["err"] * 1000, color=color, marker=mk, s=28,
-                    zorder=5)
-    axb.axhline(mean_err_mv, color="#888", ls="--", lw=1,
-                label=f"mean {elabel} = {mean_err_mv:.1f} mV")
-    axb.set_ylim(bottom=0)
-    axb.set_ylabel(f"± {elabel} (mV)")
-    axb.grid(True, alpha=0.2)
-    axb.legend(loc="upper left", frameon=False, fontsize=8)
+    if axb is not None:
+        mean_err_mv = fit_agg["err"].mean() * 1000
+        for d, grp in (fit_agg.groupby("day") if "day" in fit_agg.columns
+                       else [(None, fit_agg)]):
+            color, mk = markers.get(int(d), ("#0E2A4E", "o")) if d is not None \
+                else ("#0E2A4E", "o")
+            axb.vlines(grp[conc_col], 0, grp["err"] * 1000, color=color, lw=1.2, alpha=0.6)
+            axb.scatter(grp[conc_col], grp["err"] * 1000, color=color, marker=mk, s=28,
+                        zorder=5)
+        axb.axhline(mean_err_mv, color="#888", ls="--", lw=1,
+                    label=f"mean {elabel} = {mean_err_mv:.1f} mV")
+        axb.set_ylim(bottom=0)
+        axb.set_ylabel(f"± {elabel} (mV)")
+        axb.grid(True, alpha=0.2)
+        axb.legend(loc="upper left", frameon=False, fontsize=8)
 
-    # third panel: prediction error in ppm (back-calc c_hat - c_true)
-    for d_, grp_ in err_df.groupby("day"):
-        color, mk = markers.get(int(d_), ("#0E2A4E", "o"))
-        axc.errorbar(grp_["c"], grp_["err_mean"], yerr=grp_["c_hat_sd"], fmt=mk,
-                     color=color, ms=4, lw=0, elinewidth=1.0, capsize=2,
-                     ecolor=color, zorder=5)
-    axc.axhline(0, color="#0E2A4E", lw=1, alpha=0.5)
-    axc.axhline(mae, color="#888", ls=":", lw=1, label=f"MAE = {mae:.1f} ppm")
-    axc.axhline(-mae, color="#888", ls=":", lw=1)
-    axc.set_xlabel(f"reference concentration ({unit})  ·  bands: HydroSense salivary thresholds")
-    axc.set_ylabel("prediction error (ppm)")
-    axc.grid(True, alpha=0.2)
-    axc.legend(loc="upper right", frameon=False, fontsize=8)
+    if axc is not None:
+        for d_, grp_ in err_df.groupby("day"):
+            color, mk = markers.get(int(d_), ("#0E2A4E", "o"))
+            axc.errorbar(grp_["c"], grp_["err_mean"], yerr=grp_["c_hat_sd"], fmt=mk,
+                         color=color, ms=4, lw=0, elinewidth=1.0, capsize=2,
+                         ecolor=color, zorder=5)
+        axc.axhline(0, color="#0E2A4E", lw=1, alpha=0.5)
+        axc.axhline(mae, color="#888", ls=":", lw=1, label=f"MAE = {mae:.1f} ppm")
+        axc.axhline(-mae, color="#888", ls=":", lw=1)
+        axc.set_xlabel(f"reference concentration ({unit})  ·  bands: HydroSense salivary thresholds")
+        axc.set_ylabel("prediction error (ppm)")
+        axc.grid(True, alpha=0.2)
+        axc.legend(loc="upper right", frameon=False, fontsize=8)
 
     fig.tight_layout()
     args.out.parent.mkdir(parents=True, exist_ok=True)
