@@ -535,7 +535,7 @@
       <a href="#system">Bottle</a>
       <a href="#calibration">Calibration</a>
       <a href="#science">Reference</a>
-      <a href="live.html">Live</a>
+      <a href="#interfaces">Interfaces</a>
     </nav>
   </div>
 </header>
@@ -698,11 +698,49 @@
   </div>
 </section>
 
+<!-- INTERFACES -->
+<section id="interfaces">
+  <div class="wrap">
+    <div class="section-num">§ 05 · Interfaces</div>
+    <h2 class="serif">Three views, all in the browser.</h2>
+    <p class="prose" style="margin-bottom: 40px; max-width: 720px;">
+      Two UI prototypes show the user-facing and caregiver-facing experiences with simulated
+      hydration scenarios; one viewer connects to the bottle over Bluetooth and plots the real
+      sensor reading live. None of the three needs an app store or sign-up.
+    </p>
+
+    <div class="specs">
+      <div></div>
+      <div class="col-head">User app <span class="sub">UI prototype · simulated</span></div>
+      <div class="col-head">Caregiver console <span class="sub">UI prototype · simulated</span></div>
+
+      <div class="row-label">What it shows</div>
+      <div>Water-drop hydration gauge, daily progress, drink reminders, scenario switcher (normal / warning / critical)</div>
+      <div>Patient overview, salivary TDS reading with band classification, history, CSV export</div>
+
+      <div class="row-label">Data source</div>
+      <div>Simulated scenarios in JavaScript</div>
+      <div>Simulated scenarios in JavaScript</div>
+
+      <div class="row-label price-row">Open</div>
+      <div class="price-row"><a href="index.html" class="btn-text">index.html →</a></div>
+      <div class="price-row"><a href="dashboard.html" class="btn-text">dashboard.html →</a></div>
+    </div>
+
+    <p class="prose" style="margin-top: 48px; max-width: 720px;">
+      The <strong>live BLE viewer</strong> is the one connected to real hardware: it speaks Web
+      Bluetooth to the ESP32, subscribes to the Nordic UART characteristic, and plots the calibrated
+      ppm reading every second. Works in Chrome or Edge on Android, macOS, Windows or Linux
+      (iOS does not support Web Bluetooth).
+    </p>
+  </div>
+</section>
+
 <!-- CLOSER -->
 <section class="closer">
   <div class="wrap">
     <h2 class="serif">The live viewer connects to the bottle over Bluetooth — <em>directly from the browser</em>.</h2>
-    <p class="deck">No app store, no pairing, no cloud. Open the page on Chrome or Edge (Android, macOS, Windows or Linux), choose the AquaAlertBottle device, and watch the ppm rise as salt is added to a glass of water.</p>
+    <p class="deck">No app store, no pairing, no cloud. Open the page on Chrome or Edge, choose the AquaAlertBottle device, and watch the ppm rise as salt is added to a glass of water.</p>
     <a href="live.html" class="btn">Open the live viewer</a>
   </div>
 </section>
