@@ -531,11 +531,11 @@
   <div class="wrap">
     <a href="#" class="brand"><span class="brand-mark"></span>AquaAlert</a>
     <nav>
-      <a href="#problem">Problem</a>
-      <a href="#system">System</a>
-      <a href="#method">Method</a>
-      <a href="#science">Evidence</a>
-      <a href="index.html">Demo</a>
+      <a href="#problem">Why</a>
+      <a href="#system">Bottle</a>
+      <a href="#calibration">Calibration</a>
+      <a href="#science">Reference</a>
+      <a href="live.html">Live</a>
     </nav>
   </div>
 </header>
@@ -545,23 +545,23 @@
   <div class="wrap">
     <div>
       <div class="kicker">
-        A research prototype <span class="sep">·</span> Medical Devices 295623 <span class="sep">·</span> EEBE UPC
+        Research prototype <span class="sep">·</span> Medical Devices 295623 <span class="sep">·</span> EEBE UPC
       </div>
-      <h1 class="serif">Catching dehydration in older adults <em>before</em> symptoms appear.</h1>
+      <h1 class="serif">A salivary hydration sensor, <em>built and calibrated</em>.</h1>
       <p class="deck">
-        AquaAlert is a two-sensor system — a smart bottle and an ankle wearable — that combines salivary
-        conductance with whole-body bioimpedance. The fusion yields a single hydration index, updated
-        every few minutes, with tiered alerts to user and caregiver.
+        AquaAlert is a smart-bottle prototype that measures salivary conductance (TDS) and streams a
+        calibrated reading to a web app over Bluetooth. This page documents the device as built;
+        the ankle bioimpedance wearable and caregiver console are designed but not yet implemented.
       </p>
       <div class="actions">
-        <a href="index.html" class="btn">Open the demo</a>
-        <a href="#problem" class="btn-text">Read the rationale</a>
+        <a href="live.html" class="btn">Open the live BLE viewer</a>
+        <a href="#calibration" class="btn-text">See the calibration</a>
       </div>
     </div>
     <aside class="figure">
-      <div class="num serif">~3,800</div>
-      <div class="label">heat-related deaths per year in Spain; the majority are aged 65 and over.</div>
-      <div class="source">Ministerio de Sanidad, MoMo system</div>
+      <div class="num serif">0.995</div>
+      <div class="label">R² of the slope-only calibration over 39 measurements in 12 NaCl solutions (57–850 ppm), two independent sessions.</div>
+      <div class="source">Own calibration, May 2026</div>
     </aside>
   </div>
 </section>
@@ -569,41 +569,21 @@
 <!-- PROBLEM -->
 <section id="problem">
   <div class="wrap">
-    <div class="section-num">§ 01 · The problem</div>
-    <h2 class="serif">Thirst is a late signal — and in older adults, it is often missing entirely.</h2>
+    <div class="section-num">§ 01 · Why hydration in older adults</div>
+    <h2 class="serif">Thirst is a late signal, and existing hydration wearables target the wrong user.</h2>
 
-    <div class="problem-grid">
-      <div class="prose">
-        <p>
-          The osmoreceptor response that drives thirst weakens with age. Combined with reduced
-          renal concentrating ability and lower total body water reserves, this leaves adults over 65
-          uniquely vulnerable to heat. By the time confusion or syncope brings them to an emergency
-          room, the deficit is already advanced.
-        </p>
-        <p>
-          Existing smart bottles count sips. Existing wearables for athletes infer hydration from
-          sweat — a signal that fades precisely in the population at risk. Neither approach measures
-          the body itself.
-        </p>
-        <blockquote class="pull">
-          "The first measurable physiological change in mild dehydration is a rise in salivary
-          electrolyte concentration. The first behavioural signal is fatigue. Thirst comes last."
-        </blockquote>
-        <p>
-          AquaAlert moves the measurement upstream of symptoms by reading two biomarkers directly:
-          salivary ionic conductance at the mouthpiece, and total body water through tetrapolar
-          ankle bioimpedance. Both have prior validation against clinical reference methods.
-        </p>
-      </div>
-
-      <dl class="sidenote">
-        <dt>Population at risk</dt>
-        <dd>9.0 million adults aged 65+ in Spain (INE, 2024).</dd>
-        <dt>Excess mortality</dt>
-        <dd>3,824 heat-attributable deaths summer 2024; 87% in the 65+ cohort.</dd>
-        <dt>Existing tools</dt>
-        <dd>Sweat patches (Nix, Epicore, hDrop) target athletes; clinical hydration assessment requires lab serum osmolality.</dd>
-      </dl>
+    <div class="prose" style="max-width: 720px;">
+      <p>
+        Today's hydration sensors (Nix, hDrop, Epicore, Kenzen) are built around <strong>sweat</strong>
+        — a signal designed for endurance athletes and outdoor industrial workers. Older adults sweat
+        less, feel thirst less, and are precisely the cohort for whom that approach fails.
+      </p>
+      <p>
+        AquaAlert measures <strong>saliva</strong> instead. Salivary ionic conductance (TDS) rises
+        measurably under early water deficit, as established in the literature (see Evidence). This
+        prototype implements the bottle side of that approach with an ESP32 and a commercial TDS
+        sensor, calibrated against NaCl standards across the salivary clinical range.
+      </p>
     </div>
   </div>
 </section>
@@ -611,93 +591,80 @@
 <!-- SYSTEM -->
 <section id="system">
   <div class="wrap">
-    <div class="section-num">§ 02 · The system</div>
-    <h2 class="serif">Two devices. One index. Both passive to the user.</h2>
+    <div class="section-num">§ 02 · The bottle prototype</div>
+    <h2 class="serif">A salivary TDS sensor on ESP32, with auto-tare and live BLE streaming.</h2>
     <p class="prose" style="margin-bottom: 40px;">
-      The bottle acts as BLE hub and gateway; the ankle mesh streams to it. A multimodal model
-      fuses the four channels into a single 0–100 score and decides whether to nudge the user,
-      page the caregiver, or escalate further.
+      The bottle samples the sensor at 25 Hz with a 30-sample median filter, applies temperature
+      compensation, and notifies the calibrated TDS reading once per second over Bluetooth Low
+      Energy. A web client (no app store, no pairing) plots it live and classifies the value
+      against the HydroSense salivary bands.
     </p>
 
     <div class="specs">
       <div></div>
-      <div class="col-head">AquaAlert Bottle <span class="sub">Salivary conductance + thermal</span></div>
-      <div class="col-head">AquaAlert Leg Mesh <span class="sub">Tetrapolar ankle BIA</span></div>
+      <div class="col-head">Hardware <span class="sub">Built</span></div>
+      <div class="col-head">Connectivity <span class="sub">Working</span></div>
 
-      <div class="row-label">Primary sensor</div>
-      <div>Au coplanar IDE, 100 µm pitch, AC excitation</div>
-      <div>4-electrode Ag/AgCl, 50 kHz drive (AD5941)</div>
+      <div class="row-label">Sensor module</div>
+      <div>DFRobot Gravity SEN0244 analog TDS</div>
+      <div>BLE 5.0, Nordic UART service (NUS), notify @ 1 Hz</div>
 
-      <div class="row-label">Secondary sensor</div>
-      <div>NTC × 2 (liquid + ambient)</div>
-      <div>Skin-temperature thermistor</div>
+      <div class="row-label">Microcontroller</div>
+      <div>ESP32-WROOM-32, GPIO34 (ADC1_CH6, 12-bit)</div>
+      <div>ASCII line protocol ("&lt;ppm&gt;\n")</div>
 
-      <div class="row-label">Radio</div>
-      <div>BLE 5.0 (acts as hub)</div>
-      <div>BLE 5.0 to bottle hub</div>
+      <div class="row-label">Conditioning</div>
+      <div>30-sample median filter, 40 ms sampling, DFRobot temperature compensation</div>
+      <div>Web Bluetooth client (Chrome / Edge), no installation</div>
 
-      <div class="row-label">Power</div>
-      <div>Li-Po 500 mAh, USB-C</div>
-      <div>Coin cell, ≈ 6-month life</div>
+      <div class="row-label">Zero handling</div>
+      <div>5-second auto-tare in clean water at boot (LED blinks)</div>
+      <div>Served from GitHub Pages over HTTPS</div>
 
-      <div class="row-label">Ingress / form</div>
-      <div>IP67, dishwasher-rated insert</div>
-      <div>Washable soft mesh, ankle</div>
-
-      <div class="row-label price-row">Target unit price</div>
-      <div class="price-row">€50</div>
-      <div class="price-row">€30</div>
+      <div class="row-label price-row">Status</div>
+      <div class="price-row">Calibrated</div>
+      <div class="price-row">Live</div>
     </div>
+
+    <p class="prose" style="margin-top: 32px; max-width: 720px; color: var(--ink-3); font-size: 14px;">
+      <strong>Designed but not implemented in this iteration:</strong> the ankle bioimpedance wearable,
+      the multimodal fusion algorithm, and the caregiver console. The current scope is the bottle
+      sensor itself, end to end: from electrode to phone.
+    </p>
   </div>
 </section>
 
-<!-- METHOD -->
-<section id="method">
+<!-- CALIBRATION -->
+<section id="calibration">
   <div class="wrap">
-    <div class="section-num">§ 03 · From signal to alert</div>
-    <h2 class="serif">A four-step pipeline. No cloud lock-in. No opaque inference.</h2>
+    <div class="section-num">§ 03 · Calibration</div>
+    <h2 class="serif">Slope-only model, two independent sessions, 39 measurements.</h2>
+    <div class="prose" style="max-width: 720px;">
+      <p>
+        Twelve NaCl solutions across the salivary range (57–850 ppm) were measured with 3–4 replicates
+        each across two sessions. The least-squares fit forced through the origin
+        (V = m·c, with the physical zero set by the auto-tare on each boot) yields
+        <strong>R² = 0.995</strong> and a sensor sensitivity of <strong>2.37 mV/ppm</strong>.
+      </p>
+    </div>
 
-    <div class="method">
-      <ol>
-        <li>
-          <div>
-            <h4 class="serif">Acquisition</h4>
-            <p>
-              Conductance is sampled at the mouthpiece each time the user drinks; ankle impedance is
-              sampled every 30 minutes; temperatures continuously. Raw ADC values are stamped and
-              buffered on the device.
-            </p>
-          </div>
-        </li>
-        <li>
-          <div>
-            <h4 class="serif">Fusion at the edge</h4>
-            <p>
-              The bottle hub merges its own stream with the leg mesh over BLE GATT. No data leaves
-              the device unless an alert is triggered.
-            </p>
-          </div>
-        </li>
-        <li>
-          <div>
-            <h4 class="serif">Index calculation</h4>
-            <p>
-              A weighted model returns a 0–100 hydration score. The weighting was derived from the
-              cited validation studies; it can be retrained per-user with three days of baseline
-              measurements.
-            </p>
-          </div>
-        </li>
-        <li>
-          <div>
-            <h4 class="serif">Tiered notification</h4>
-            <p>
-              Index ≥ 60: silent. 30–59: gentle prompt to drink, with the bottle's haptic vibration.
-              &lt; 30: caregiver notification and, if configured, a call to emergency contact.
-            </p>
-          </div>
-        </li>
-      </ol>
+    <img src="docs/calibration_presentation.png"
+         alt="Calibration curve V vs c of the TDS sensor"
+         style="width: 100%; max-width: 760px; display: block; margin: 32px 0; border: 1px solid var(--rule-soft);">
+
+    <div class="data-strip" style="margin-top: 24px;">
+      <div>
+        <div class="num serif">0.995</div>
+        <div class="desc">R² of V = 0.002374·c over the 57–850 ppm linear range.</div>
+      </div>
+      <div>
+        <div class="num serif">±28</div>
+        <div class="desc">prediction uncertainty per single reading (s<sub>x0</sub>, ppm).</div>
+      </div>
+      <div>
+        <div class="num serif">1.8%</div>
+        <div class="desc">intra-solution replicate coefficient of variation.</div>
+      </div>
     </div>
   </div>
 </section>
@@ -705,157 +672,38 @@
 <!-- EVIDENCE -->
 <section id="science">
   <div class="wrap">
-    <div class="section-num">§ 04 · Evidence base</div>
-    <h2 class="serif">Built on a validated saliva method, extended for elderly care.</h2>
+    <div class="section-num">§ 04 · Reference</div>
+    <h2 class="serif">Salivary TDS as a hydration biomarker.</h2>
     <p class="prose" style="margin-bottom: 32px;">
-      The bottle's conductance sensor follows <strong>HydroSense</strong>, which established
-      salivary TDS as a non-invasive dehydration marker on low-cost hardware. AquaAlert adopts its
-      thresholds, then adds ankle bioimpedance, caregiver alerts, and an elderly-care form factor.
+      AquaAlert builds on the salivary TDS approach published in <strong>HydroSense</strong>
+      (IJSRSET 2025), and adopts the hydration thresholds reported in its experimental results table.
+      Where HydroSense uses unspecified sensors on Arduino, AquaAlert documents the full hardware
+      stack and contributes a formal NaCl calibration of the sensor with R², s<sub>x0</sub>, and LOD/LOQ.
     </p>
 
     <ol class="refs">
       <li>
         <div class="body">
-          <strong>Manoj Prabu, M. et al.</strong> HydroSense: Saliva-based Non-Invasive Dehydration Detector. <em>Int. J. Sci. Res. Sci. Eng. Technol.</em> 12(6), 13–18 (2025). doi:10.32628/IJSRSET2513816.
-          pH + TDS on Arduino; salivary thresholds — hydrated 200–500, mild 500–700, moderate 700–900, severe ≥900 ppm. <em>The foundation of AquaAlert's bottle sensor.</em>
+          <strong>Manoj Prabu, M., Birundha, M., Divya, B., Nagamadhumitha, N., Niya, A. V.</strong>
+          Hydrosense: Saliva-based Non-Invasive Dehydration Detector.
+          <em>Int. J. Sci. Res. Sci. Eng. Technol.</em> 12(6), 13–18 (2025).
+          <a href="https://doi.org/10.32628/IJSRSET2513816">doi:10.32628/IJSRSET2513816</a>.
+          pH + TDS Arduino prototype for dehydration classification on saliva samples.
+          Salivary TDS thresholds — hydrated 200–500, mild 500–700, moderate 700–900, severe ≥900 ppm.
+          <em>Foundational reference for AquaAlert's bottle sensor.</em>
         </div>
         <div class="stat-cell">basis<span class="unit">pH + TDS</span></div>
       </li>
-      <li>
-        <div class="body">
-          <strong>Lu, Y. et al.</strong> Portable salivary diagnostic system for dehydration based on Au coplanar electrodes. <em>Scientific Reports</em> 9, 14771 (2019).
-          Sample volumes 50–500 µL; sensitivity / specificity vs serum osmolality.
-        </div>
-        <div class="stat-cell">86 / 91%<span class="unit">sens / spec</span></div>
-      </li>
-      <li>
-        <div class="body">
-          <strong>PMC clinical study</strong> (N = 20, 13 h). Salivary conductivity rose under 13-hour water restriction and fell after 1,000 mL rehydration; correlated with urinary osmolality, thirst scale, and body-weight loss.
-        </div>
-        <div class="stat-cell">N = 20<span class="unit">in-vivo</span></div>
-      </li>
-      <li>
-        <div class="body">
-          <strong>Dasgupta, A. et al.</strong> Tetrapolar ankle bioimpedance at 50 kHz vs reference total body water (2018). High correlation supports the wearable form factor.
-        </div>
-        <div class="stat-cell">R = 0.97<span class="unit">vs gold std.</span></div>
-      </li>
-      <li>
-        <div class="body">
-          <strong>Ekingen, T. et al.</strong> Age-related decline in body water (2022), N = 242. Establishes the 65+ cohort as the principal risk group for hypohydration during heat stress.
-        </div>
-        <div class="stat-cell">65+<span class="unit">primary cohort</span></div>
-      </li>
     </ol>
-  </div>
-</section>
-
-<!-- MARKET / COMPETITORS -->
-<section id="market">
-  <div class="wrap">
-    <div class="section-num">§ 05 · Where this sits</div>
-    <h2 class="serif">A category the wearables industry has skipped.</h2>
-    <p class="prose" style="margin-bottom: 32px;">
-      The hydration-monitoring market is growing, but the products are designed for athletes and
-      industrial workers. None target the elderly. None are designed for institutional procurement.
-      The market gap is not technological — it is one of attention.
-    </p>
-
-    <table class="compare">
-      <thead>
-        <tr>
-          <th>Product</th>
-          <th>Target user</th>
-          <th>Body-state sensing</th>
-          <th>Caregiver alerts</th>
-          <th>Reusable</th>
-          <th>Institutional channel</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr class="us">
-          <td>AquaAlert</td>
-          <td>Adults 65+</td>
-          <td class="y">Saliva + BIA</td>
-          <td class="y">Yes</td>
-          <td class="y">Yes</td>
-          <td class="y">Designed for it</td>
-        </tr>
-        <tr>
-          <td>Nix Biosensors</td>
-          <td>Endurance athletes</td>
-          <td>Sweat</td>
-          <td class="n">No</td>
-          <td class="n">Single-use patch</td>
-          <td class="n">No</td>
-        </tr>
-        <tr>
-          <td>hDrop</td>
-          <td>Endurance athletes</td>
-          <td>Sweat</td>
-          <td class="n">No</td>
-          <td class="y">Yes</td>
-          <td class="n">No</td>
-        </tr>
-        <tr>
-          <td>Epicore Biosystems</td>
-          <td>Industrial workers</td>
-          <td>Sweat</td>
-          <td class="n">No</td>
-          <td class="n">Single-use patch</td>
-          <td>B2B industrial only</td>
-        </tr>
-        <tr>
-          <td>Kenzen</td>
-          <td>Industrial workers</td>
-          <td>HR + skin temp</td>
-          <td class="n">No</td>
-          <td class="y">Yes</td>
-          <td>B2B industrial only</td>
-        </tr>
-      </tbody>
-    </table>
-
-    <div class="data-strip" style="margin-top: 48px;">
-      <div>
-        <div class="num serif">9.0M</div>
-        <div class="desc">adults aged 65+ in Spain — the principal risk cohort during heat events.</div>
-      </div>
-      <div>
-        <div class="num serif">€312M</div>
-        <div class="desc">global hydration-monitoring market in 2024.</div>
-      </div>
-      <div>
-        <div class="num serif">14.2%</div>
-        <div class="desc">projected CAGR through 2033.</div>
-      </div>
-    </div>
-
-    <div class="channel">
-      <div class="prose">
-        <p>
-          The natural buyers are not individuals but institutions: regional health departments running
-          summer heat-wave plans, residential care providers managing duty-of-care obligations, and
-          mutuas integrating prevention into their service offering. Each has the budget, the
-          mandate, and the distribution.
-        </p>
-      </div>
-      <ul class="audiences">
-        <li><span class="who">Ayuntamientos</span><span class="why">Plan calor</span></li>
-        <li><span class="who">Residencias de mayores</span><span class="why">Duty of care</span></li>
-        <li><span class="who">Mutuas</span><span class="why">Prevention services</span></li>
-        <li><span class="who">Salud pública</span><span class="why">Population programmes</span></li>
-      </ul>
-    </div>
   </div>
 </section>
 
 <!-- CLOSER -->
 <section class="closer">
   <div class="wrap">
-    <h2 class="serif">The demo simulates a day with Laura — 74, Barcelona — wearing the system through a heat warning. <em>It runs in your browser, on the phone.</em></h2>
-    <p class="deck">No sign-up. No installation. The same interface the family would see on a phone, and the same caregiver console a residencia nurse would use.</p>
-    <a href="index.html" class="btn">Open the demo</a>
+    <h2 class="serif">The live viewer connects to the bottle over Bluetooth — <em>directly from the browser</em>.</h2>
+    <p class="deck">No app store, no pairing, no cloud. Open the page on Chrome or Edge (Android, macOS, Windows or Linux), choose the AquaAlertBottle device, and watch the ppm rise as salt is added to a glass of water.</p>
+    <a href="live.html" class="btn">Open the live viewer</a>
   </div>
 </section>
 
@@ -874,7 +722,7 @@
     <div>
       <h5>Year</h5>
       <p>2025 – 2026</p>
-      <p>All references listed in the report PDF.</p>
+      <p>Foundational reference: HydroSense (IJSRSET 2025).</p>
     </div>
   </div>
 </footer>
